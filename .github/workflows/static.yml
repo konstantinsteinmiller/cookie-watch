@@ -35,12 +35,6 @@ jobs:
           ref: develop
           path: develop
 
-      - name: Checkout demo
-        uses: actions/checkout@v4
-        with:
-          ref: develop
-          path: demo
-
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
@@ -63,12 +57,6 @@ jobs:
           pnpm install --no-frozen-lockfile
         working-directory: develop
 
-      - name: Clean install dependencies (Demo)
-        run: |
-          rm -rf demo/node_modules
-          pnpm install --no-frozen-lockfile
-        working-directory: demo
-
       - name: Build Main Production
         run: npm run build-github-main
         working-directory: main
@@ -83,13 +71,6 @@ jobs:
           VITE_APP_TURN_USERNAME: ${{ secrets.VITE_APP_TURN_USERNAME }}
           VITE_APP_TURN_CREDENTIAL: ${{ secrets.VITE_APP_TURN_CREDENTIAL }}
 
-      - name: Build Demo Production
-        run: npm run build-github-demo
-        working-directory: demo
-        env:
-          VITE_APP_TURN_USERNAME: ${{ secrets.VITE_APP_TURN_USERNAME }}
-          VITE_APP_TURN_CREDENTIAL: ${{ secrets.VITE_APP_TURN_CREDENTIAL }}
-
       - name: Create Dist Folder
         run: mkdir dist
 
@@ -98,9 +79,6 @@ jobs:
 
       - name: Copy Develop Build
         run: cp -r develop/dist/* dist/develop/
-
-      - name: Copy Demo Build
-        run: cp -r demo/dist/* dist/demo/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
