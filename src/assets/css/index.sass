@@ -1,0 +1,49 @@
+@use './fonts'
+@use './components'
+
+/* Prevent all touch zooming and remove the 300ms delay */
+html, body
+  touch-action: manipulation
+  -ms-touch-action: manipulation
+  margin: 0
+  padding: 0
+  overflow: hidden
+  /* Prevents "rubber-banding" scroll effects */
+  position: fixed
+  /* Extra insurance against the layout moving */
+  width: 100%
+  height: 100%
+  /* Match app theme so the iOS PWA safe-area / home-indicator gap doesn't
+     render as a stark black bar — it now blends with the arena background. */
+  background-color: #0d2a18
+
+#app
+  height: 100%
+  width: 100%
+
+
+// 3. The Responsive Map Scaler
+.map-viewport
+  display: flex
+  align-items: center
+  justify-content: center
+  overflow: hidden
+// Change to 'auto' if you want user to be able to pan the bleed area
+
+.map-scaler
+  position: relative
+  flex-shrink: 0
+  // Centering the scaler within the viewport
+  margin: auto
+
+// 4. Fixed Pulse for Dark Mode Extensions
+.pulse-yellow-fixed
+  animation: yellow-pulse-protected 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important
+
+@keyframes yellow-pulse-protected
+  0%, 100%
+    background-color: #ffcd00 !important
+    opacity: 1
+  50%
+    background-color: #f7a000 !important
+    opacity: 0.7

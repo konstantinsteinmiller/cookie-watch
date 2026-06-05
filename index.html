@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="dark only">
+  <link rel="icon" href="/favicon.ico">
+  <!-- CSP meta tag injected by vite.config.ts at build time -->
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d2a18">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cookie Watch">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preload" as="image" href="/images/bg/bg-tile_400x400.webp" type="image/webp">
+  <link rel="preload" as="image" href="/images/logo/logo_256x256.webp" type="image/webp">
+  <title>Cookie Watch</title>
+  <style>
+      body {
+          margin: 0;
+          background-color: #0d2a18;
+          background-image: url('/images/bg/bg-tile_400x400.webp');
+          background-repeat: repeat;
+          background-size: 400px 400px;
+      }
+      #static-splash {
+          position: fixed; inset: 0; z-index: 9999;
+          display: flex; align-items: center; justify-content: center;
+          background-color: #0d2a18;
+          background-image: url('/images/bg/bg-tile_400x400.webp');
+          background-repeat: repeat;
+          background-size: 400px 400px;
+          transition: opacity 0.4s ease-out;
+      }
+      #static-splash.hidden { opacity: 0; pointer-events: none; }
+      #static-splash .splash-logo {
+          color: #5cd16d; font-family: 'Angry', sans-serif; font-weight: 900;
+          font-size: 9vmin; text-align: center; letter-spacing: 0.06em;
+          animation: splash-pulse 1.5s ease-in-out infinite;
+          line-height: 1.05;
+      }
+      @keyframes splash-pulse {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.85; }
+      }
+  </style>
+</head>
+<body>
+<div id="static-splash">
+</div>
+<!-- Load the SDK before your game code -->
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<!-- Load the SDK before your game code -->
+<script src="https://bridge.playgama.com/v1/stable/playgama-bridge.js"></script>
+<!-- Load the SDK before your game code -->
+<script src="https://integration.gamepix.com/sdk/v3/gamepix.sdk.js"></script>
+<div id="app"></div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+// 1. Tell the browser we are dark-mode native
+:root
+  color-scheme: dark only
+  forced-color-adjust: none !important
+
+  *
+    forced-color-adjust: none !important
+
+*
+  forced-color-adjust: none !important
+
+// 2. Target the extension variables without destroying them
+// Instead of transparent, we set them to 'initial' or 'inherit'
+// to let your local component styles win.
+:root, ::after, ::before, ::backdrop
+  --native-dark-bg-image-filter: none !important
+  --native-dark-bg-blend-mode: normal !important
+  --native-dark-brightness: 1 !important
+  --native-dark-opacity: 1 !important
+  // Stop the extension from forcing its own font/link colors over yours
+  --native-dark-font-color: inherit !important
+  --native-dark-link-color: inherit !important
+  --native-dark-text-shadow: inherit !important
+
+// 3. Protect your Component Shading & Gradients
+// Extensions often strip backgrounds if they think they are 'too light'
+.root-protection
+  filter: none !important
+  -webkit-filter: none !important
+
+  // Specifically protect your transparent 'shine' layers and gradients
+  // We use a high-specificity selector to ensure your FButton etc. keep their looks
+  button, div, span
+    forced-color-adjust: none !important
+    background-clip: padding-box
+// Helps keep borders clean
+
+// 4. Fix the 'Gone' Transparencies
+// Many extensions turn alpha (white/25) into solid colors.
+// We re-assert that backgrounds containing gradients or alpha should stay as-is.
+[class*="bg-white/"], [class*="bg-black/"], [class*="from-"], [class*="to-"]
+  --native-dark-bg-color: transparent !important
+  filter: none !important
+
+
+// Use a unique class name the extension won't have a pre-made rule for
+html[native-dark-active] .game-ui-immune
+  --native-dark-bg-color: rgba(30, 41, 59, 0.5) !important
+  --native-dark-border-color: inherit !important
+  --native-dark-box-shadow: inherit !important
+
+  // Re-assert border colors
+  &.border-yellow-500, .border-yellow-500
+    border-color: #eab308 !important
+  // Hardcoded yellow-500
+  &.border-green-600, .border-green-600
+    border-color: #0aac1a !important
+  // Hardcoded yellow-500
+
+  // Re-assert specific background transparencies
+  &.bg-slate-800\/50, .bg-slate-800\/50
+    background-color: rgba(30, 41, 59, 0.5) !important
+    background-blend-mode: normal !important
+
+  // Re-assert shadows
+  &.shadow-2xl, .shadow-2xl
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important
+
+  // Re-assert Pulse animations (Yellow)
+  .animate-pulse, &.animate-pulse
+    //background-color: #ffcd00 !important
+    opacity: 1 !important
+
+.custom-red-bg
+  background-color: #ff3e3e !important
+
+.text-shadow
+  text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
+
+.text-shadow-light
+  text-shadow: 3px 3px 0 #555, -1px -1px 0 #555, 1px -1px 0 #555, -1px 1px 0 #555, 1px 1px 0 #555
+
+
+.game-text
+  text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
+
+.attention-bounce
+  animation: attention-bounce 1.4s infinite ease-in-out
+
+.attention-5
+  animation: attention-bounce 1.4s 5 ease-in-out forwards
+
+@keyframes attention-bounce
+  0%, 20%, 50%, 80%, 100%
+    transform: translateY(0) scale(1)
+  40%
+    transform: translateY(-8px) scale(1.05)
+  60%
+    transform: translateY(-4px) scale(1.02)
+
+// New Hint Animation: 3s bounce, 3s pause (Total 6s cycle)
+@keyframes hint-bounce-cycle
+  // Bouncing phase (0% to 50% of 6 seconds = 3 seconds)
+  0%, 7.5%, 18.75%, 30%, 37.5%
+    transform: translateY(0) scale(1)
+  22%
+    transform: translateY(-15px) scale(1.06)
+  34.5%
+    transform: translateY(-7px) scale(1.03)
+  // Pausing phase (50% to 100% = 3 seconds)
+  50%, 100%
+    transform: translateY(0) scale(1)
+
+
+@keyframes instant-bounce-cycle
+  // Bouncing phase (0% to 100% = 3 seconds)
+  0%, 7.5%, 18.75%, 30%, 37.5%, 57.5%, 68.75%, 80%, 87.5%, 50%, 100%
+    transform: translateY(0) scale(1)
+  22%, 72%
+    transform: translateY(-15px) scale(1.06)
+  34.5%, 84.5%
+    transform: translateY(-7px) scale(1.03)
+
+.instant-bounce
+  animation: instant-bounce-cycle 3s infinite ease-in-out
+
+.hint-bounce
+  animation: hint-bounce-cycle 6s infinite ease-in-out
+
+.hint-bounce-2
+  animation: hint-bounce-cycle-2 5s infinite ease-in-out
+
+@keyframes hint-bounce-cycle-2
+  // Bouncing phase (50% to 100% of 5 seconds = 3 seconds)
+  0%, 40.5%, 56.5%, 68.75%, 80%, 87.5%, 100%
+    transform: translateY(0) scale(1)
+  48.5%, 72%
+    transform: translateY(-15px) scale(1.06)
+  63.5%, 84.5%
+    transform: translateY(-7px) scale(1.03)

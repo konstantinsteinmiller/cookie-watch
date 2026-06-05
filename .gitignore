@@ -1,0 +1,79 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+wavedash.toml
+wavedash-dist
+itch-dist
+dist_electron
+__electron
+electron/dist
+electron/dist-demo
+out
+
+dist-purity-cg
+
+node_modules
+.DS_Store
+dist
+dist-ssr
+coverage
+*.local
+*.env
+.env
+.env.*
+# Non-secret build state checked in so multiple dev machines stay in
+# sync (Android versionCode counter — Play Console rejects re-uploads
+# of the same code, so the latest value MUST be committed).
+!.env.tauri.remote
+
+# Editor directories and files
+.vscode/settings.json
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+*.tsbuildinfo
+
+# Stray git-internal files that were accidentally committed at the project
+# root by a broken bare-repo setup (now reinitialized as a normal worktree).
+/HEAD
+/config
+/description
+/hooks/
+/info/
+
+.eslintcache
+
+# Cypress
+/cypress/videos/
+/cypress/screenshots/
+
+# Vitest
+__screenshots__/
+
+# Vite
+*.timestamp-*-*.mjs
+/src/assets/inspiration/Campaign map.png
+/src/assets/inspiration/Deck building.png
+/src/assets/inspiration/Devil Card game field.vue.png
+/src/assets/inspiration/Game over.png
+/src/assets/inspiration/good duel intro.png
+/src/assets/inspiration/main menu.png
+/src/assets/inspiration/Rules page.png
+/src/assets/inspiration/Take Card.vue.png
+/src/assets/inspiration/Turn selection.png
+/output_previews/*
+
+# iOS xcframeworks downloaded by tauri-plugin-levelplay/build.rs
+/src-tauri/plugins/tauri-plugin-levelplay/ios/Frameworks/
+/src/assets/art/

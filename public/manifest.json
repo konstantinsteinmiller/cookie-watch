@@ -1,0 +1,12 @@
+{
+  "name": "Cookie Watch",
+  "short_name": "Cookie Watch",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "portrait",
+  "start_url": "./",
+  "scope": "./",
+  "theme_color": "#0d2a18",
+  "background_color": "#0d2a18",
+  "icons": []
+}
