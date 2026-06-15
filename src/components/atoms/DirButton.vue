@@ -3,21 +3,34 @@ import { computed } from 'vue'
 import type { Dir } from '@/use/useCookieGame'
 
 // A single on-screen control: one of the four directional pads or the central
-// Interact button. Fires on `pointerdown` (not click) so taps register with no
-// 300ms delay and feel instant on mobile. `active` highlights the pad the game
-// is currently prompting; `interact` swaps the glyph for the chunk/devour action.
+// Interact button. `press` fires on `pointerdown` (not click) so it registers
+// with no 300ms delay and feels instant on mobile; `release` fires on pointer
+// up/cancel/leave so the d-pad can be HELD to sneak continuously (and a quick
+// double-press dashes). `active` highlights the held/suggested pad; `interact`
+// swaps the glyph for the chunk/devour action (a plain tap, no hold needed).
 const props = defineProps<{
   dir?: Dir
   interact?: boolean
   active?: boolean
   disabled?: boolean
 }>()
-const emit = defineEmits<{ (e: 'press'): void }>()
+const emit = defineEmits<{ (e: 'press'): void; (e: 'release'): void }>()
 
+let held = false
 const onDown = (e: PointerEvent): void => {
   e.preventDefault()
   if (props.disabled) return
+  held = true
+  try {
+    (e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId)
+  } catch { /* ignore */
+  }
   emit('press')
+}
+const onUp = (): void => {
+  if (!held) return
+  held = false
+  emit('release')
 }
 
 // SVG arrow rotation per direction (base points up).
@@ -36,6 +49,9 @@ const rotation = computed(() => {
     type="button"
     :class="[active ? 'is-active' : '', disabled ? 'opacity-40' : '']"
     @pointerdown="onDown"
+    @pointerup="onUp"
+    @pointercancel="onUp"
+    @pointerleave="onUp"
     @contextmenu.prevent
   )
     //- raised shadow base

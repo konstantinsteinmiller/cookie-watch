@@ -4,20 +4,43 @@ import * as G from '@/use/useCookieGame'
 // Pure-logic + simulated-run coverage for the Cookie Watch engine. The module
 // is a singleton; `resetForStage()` re-seeds the run state between tests.
 
-const advance = (ms = 200): void => G.step(ms)
+const TICK = 60
 
-/** Drive one input toward clearing the stage: press the prompted direction, or
- *  grab/leave at the cookie. `advance` first so presses aren't flagged hasty. */
-const playOneInput = (): void => {
-  const kind = G.pendingKind.value
-  advance()
-  if (kind === 'move' || kind === 'trap') {
-    const d = G.expectedDir.value
-    if (d) G.pressDir(d)
-  } else if (kind === 'interact') {
-    if (G.chunksCarried.value < 6 && G.game.chunksInCookie > 0) G.pressInteract()
-    else G.pressDir('up') // initiate the return trip
+/** Drive a careful, perfect-reflex run: sneak toward the goal only while the
+ *  cat is asleep, freeze the instant it stirs/wakes, grab a full haul at the
+ *  cookie and carry it home. Mirrors how the held-key controls feed the engine
+ *  (press once → step many frames → release). */
+const playSmartRun = (): void => {
+  let current: G.Dir | null = null
+  const hold = (dir: G.Dir | null): void => {
+    if (current === dir) return
+    if (current) G.releaseDir(current)
+    if (dir) G.pressDir(dir)
+    current = dir
   }
+  let guard = 0
+  while (G.phase.value === 'playing' && guard++ < 10_000) {
+    const asleep = G.catStateRef.value === 'asleep'
+    const g = G.game
+    if (!asleep) {
+      hold(null)
+      G.step(TICK)
+      continue
+    }      // freeze & hide
+    const sackFull = g.chunksCarried >= 6 || g.chunksInCookie <= 0
+    if (sackFull && g.chunksCarried > 0) {
+      hold('left')
+      G.step(TICK)                              // carry the full haul home
+    } else if (g.pos >= 0.93) {
+      hold(null)
+      G.pressInteract()
+      G.step(180)             // fill the sack at the cookie
+    } else {
+      hold('right')
+      G.step(TICK)                            // sneak to the cookie
+    }
+  }
+  hold(null)
 }
 
 beforeEach(() => {
@@ -26,7 +49,7 @@ beforeEach(() => {
 })
 
 describe('stage configuration', () => {
-  it('scales zones 4 → 6 every two stages', () => {
+  it('scales the legacy zone hint 4 → 6 every two stages', () => {
     expect(G.zoneCountForStage(1)).toBe(4)
     expect(G.zoneCountForStage(2)).toBe(4)
     expect(G.zoneCountForStage(3)).toBe(5)
@@ -41,7 +64,7 @@ describe('stage configuration', () => {
     expect(G.cookieChunksForStage(30)).toBe(18)
   })
 
-  it('shrinks the cat-nap timer with a floor of 45s', () => {
+  it('shrinks the time limit with a floor of 45s', () => {
     expect(G.stageTimeForStage(1)).toBe(90)
     expect(G.stageTimeForStage(2)).toBe(85)
     expect(G.stageTimeForStage(20)).toBe(45)
@@ -49,7 +72,7 @@ describe('stage configuration', () => {
 })
 
 describe('weight + greedy tables (GDD)', () => {
-  it('maps carried chunks → taps per zone', () => {
+  it('maps carried chunks → taps per chunk', () => {
     expect(G.tapsForChunks(0)).toBe(1)
     expect(G.tapsForChunks(2)).toBe(1)
     expect(G.tapsForChunks(3)).toBe(2)
@@ -73,8 +96,7 @@ describe('a full clean run', () => {
     G.begin()
     expect(G.phase.value).toBe('playing')
 
-    let guard = 0
-    while (G.phase.value === 'playing' && guard++ < 400) playOneInput()
+    playSmartRun()
 
     expect(G.phase.value).toBe('review')
     expect(G.chunksDeposited.value).toBe(G.cookieTotal.value)
@@ -85,13 +107,28 @@ describe('a full clean run', () => {
     expect(r.daringTotal).toBeGreaterThan(r.chunkPoints)
   })
 
-  it('keeps the cat calm enough to never fail a clean run', () => {
+  it('never gets caught when freezing the moment the cat wakes', () => {
     G.resetForStage()
     G.begin()
-    let guard = 0
-    while (G.phase.value === 'playing' && guard++ < 400) playOneInput()
-    // Reached review (not 'dead') → the cat never caught the mouse.
+    playSmartRun()
     expect(G.phase.value).toBe('review')
+  })
+})
+
+describe('the cat catches a careless mouse', () => {
+  it('stomps the Mouse caught running while awake', () => {
+    G.resetForStage()
+    G.begin()
+    // Force the cat awake, then keep sneaking regardless → spotted & stomped.
+    G.game.pos = 0.5
+    G.spawnTestCratePile()        // slam awareness to 100 so the cat wakes now
+    let guard = 0
+    while (G.phase.value === 'playing' && guard++ < 400) {
+      G.pressDir('right')         // keep moving into the open
+      G.step(TICK)
+    }
+    expect(G.phase.value).toBe('dead')
+    expect(G.lossCause.value).toBe('caught')
   })
 })
 
@@ -99,12 +136,14 @@ describe('frenzy → win advances the stage', () => {
   it('devours the cookie and flips to won', () => {
     G.resetForStage()
     G.begin()
-    let guard = 0
-    while (G.phase.value === 'playing' && guard++ < 400) playOneInput()
+    playSmartRun()
     expect(G.phase.value).toBe('review')
     G.startFrenzy()
     expect(G.phase.value).toBe('frenzy')
-    for (let i = 0; i < 40 && G.phase.value === 'frenzy'; i++) { G.frenzyTap(); advance(40) }
+    for (let i = 0; i < 40 && G.phase.value === 'frenzy'; i++) {
+      G.frenzyTap()
+      G.step(40)
+    }
     expect(G.phase.value).toBe('won')
   })
 })

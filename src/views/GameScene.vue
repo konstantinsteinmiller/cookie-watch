@@ -47,10 +47,10 @@ const cookie = useCookieGame()
 const {
   phase, lossCause, lives, score, timeLeft, awarenessPct, catState,
   chunksCarried, chunksRemaining, chunksDeposited, cookieTotal,
-  expectedDir, pendingKind, interactHint, frenzyPct, frenzyTimeLeft,
+  expectedDir, pendingKind, interactHint, mustFreeze, frenzyPct, frenzyTimeLeft,
   reviewData, lastDaringTotal, stageTarget,
-  begin, resetForStage, pressDir, pressInteract, startFrenzy, frenzyTap,
-  revive, confirmLoss
+  begin, resetForStage, pressDir, releaseDir, releaseAllDirs, pressInteract,
+  startFrenzy, frenzyTap, revive, confirmLoss
 } = cookie
 const progress = useEpicProgress()
 const { recordRun } = useMissions()
@@ -117,8 +117,24 @@ const onCanvasDown = (e: PointerEvent): void => {
   else if (phase.value === 'frenzy') frenzyTap()
 }
 
-const onDir = (dir: Dir): void => {
-  if (phase.value === 'playing') pressDir(dir)
+// Directions held right now (keyboard + on-screen pad), tracked reactively so
+// the pad can highlight whichever way the Mouse is currently sneaking.
+const heldDirs = ref<Set<Dir>>(new Set())
+const setHeld = (dir: Dir, down: boolean): void => {
+  const next = new Set(heldDirs.value)
+  if (down) next.add(dir)
+  else next.delete(dir)
+  heldDirs.value = next
+}
+
+const onDirDown = (dir: Dir): void => {
+  if (phase.value !== 'playing') return
+  setHeld(dir, true)
+  pressDir(dir)   // engine handles continuous move + double-tap → run
+}
+const onDirUp = (dir: Dir): void => {
+  setHeld(dir, false)
+  releaseDir(dir)
 }
 const onInteract = (): void => {
   if (phase.value === 'playing') pressInteract()
@@ -130,17 +146,35 @@ const KEY_DIR: Record<string, Dir> = {
   ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
   ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right'
 }
-const onKey = (e: KeyboardEvent): void => {
+// Genuine key-down codes (the OS auto-repeats keydown while held; we ignore
+// repeats so a single hold = one continuous sneak, and a real double-tap runs).
+const downCodes = new Set<string>()
+const onKeyDown = (e: KeyboardEvent): void => {
   const tgt = e.target
   if (tgt instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(tgt.tagName)) return
   const mapped = KEY_DIR[e.code]
   if (mapped) {
     e.preventDefault()
-    onDir(mapped)
+    if (downCodes.has(e.code)) return
+    downCodes.add(e.code)
+    onDirDown(mapped)
   } else if (e.code === 'Space' || e.code === 'Enter') {
     e.preventDefault()
     onInteract()
   }
+}
+const onKeyUp = (e: KeyboardEvent): void => {
+  const mapped = KEY_DIR[e.code]
+  if (!mapped) return
+  downCodes.delete(e.code)
+  onDirUp(mapped)
+}
+// Letting go of focus (alt-tab, ad overlay) must drop every held direction so
+// the Mouse doesn't keep sneaking into a stomp while the player is away.
+const onBlur = (): void => {
+  downCodes.clear()
+  heldDirs.value = new Set()
+  releaseAllDirs()
 }
 
 // ─── HUD state ──────────────────────────────────────────────────────────────
@@ -158,10 +192,13 @@ const showHint = computed(() => phase.value === 'playing' && progress.stage.valu
 const hintText = computed(() => isMobilePortrait.value ? t('hints.tapToMove') : t('hints.keysToMove'))
 const startText = computed(() => isMobilePortrait.value ? t('startTouch') : t('startDesktop'))
 
-// On-screen pad highlight: which dir the game is prompting right now.
+// On-screen pad highlight: light up whichever direction is held; otherwise give
+// a gentle pulse on the suggested heading (toward the cookie / back home).
 const isDirActive = (d: Dir): boolean =>
-  (pendingKind.value === 'move' || pendingKind.value === 'trap') && expectedDir.value === d
+  heldDirs.value.has(d) || (heldDirs.value.size === 0 && expectedDir.value === d)
 const interactActive = computed(() => pendingKind.value === 'interact' || interactHint.value === 'grab')
+// "Freeze!" warning — the cat is watching and the Mouse must hold still.
+const freezeWarn = computed(() => phase.value === 'playing' && mustFreeze.value)
 
 // Timer display (mm:ss) + low-time pulse.
 const timeDisplay = computed(() => {
@@ -353,6 +390,7 @@ const reviewRows = computed(() => {
 })
 
 watch(phase, (p, prev) => {
+  if (p !== 'playing') onBlur()   // leaving play drops any held sneak input
   if (p === 'playing' && prev !== 'playing') startBattleMusic()
   if (p === 'dead' && prev === 'playing') void onDeath()
   if (p === 'review' && prev === 'playing') onReview()
@@ -367,7 +405,9 @@ onMounted(() => {
   nextTick(resize)
   window.addEventListener('resize', resize)
   window.addEventListener('orientationchange', resize)
-  window.addEventListener('keydown', onKey)
+  window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('keyup', onKeyUp)
+  window.addEventListener('blur', onBlur)
   rafId = requestAnimationFrame(loop)
   tickTimer = window.setInterval(() => { tickNow.value = Date.now() }, 250)
 })
@@ -376,7 +416,9 @@ onUnmounted(() => {
   cancelAnimationFrame(rafId)
   window.removeEventListener('resize', resize)
   window.removeEventListener('orientationchange', resize)
-  window.removeEventListener('keydown', onKey)
+  window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('keyup', onKeyUp)
+  window.removeEventListener('blur', onBlur)
   clearInterval(tickTimer)
   stopBattleMusic()
 })
@@ -448,13 +490,23 @@ onUnmounted(() => {
           div.text-white.font-black.uppercase.tracking-wider.animate-pulse.game-text(class="text-3xl sm:text-5xl mb-2") {{ startText }}
           div.text-yellow-100.italic.game-text(class="text-sm sm:text-lg opacity-80 max-w-md mx-auto") {{ t('startSubhint') }}
 
-      //- Control hint (Tap/Click to move) — first stages only
+      //- Control hint (Hold/Release to sneak) — first stages only
       Transition(name="fade")
         div.absolute.left-0.right-0.flex.justify-center.z-10(
-          v-if="showHint"
+          v-if="showHint && !freezeWarn"
           :style="{ bottom: 'calc(13rem + env(safe-area-inset-bottom, 0px))' }"
         )
           div.text-white.italic.game-text.opacity-80(class="text-xs sm:text-sm px-3 py-1 rounded-full bg-black/40") {{ hintText }}
+
+      //- FREEZE! warning — the cat is awake, the Mouse must hold still
+      Transition(name="fade")
+        div.absolute.left-0.right-0.flex.justify-center.z-10(
+          v-if="freezeWarn"
+          :style="{ top: 'calc(13rem + env(safe-area-inset-top, 0px))' }"
+        )
+          div.font-black.uppercase.tracking-widest.game-text.animate-pulse(
+            class="text-2xl sm:text-4xl px-4 py-1 rounded-xl bg-red-700/70 border-2 border-red-300 text-white"
+          ) {{ t('hints.freeze') }}
 
       //- ── D-pad + interact (bottom-center) ────────────────────────────────
       div.absolute.left-0.right-0.flex.justify-center.pointer-events-none(
@@ -469,15 +521,15 @@ onUnmounted(() => {
           }"
         )
           div(style="grid-area: 1 / 2")
-            DirButton(dir="up" :active="isDirActive('up')" class="w-full h-full" @press="onDir('up')")
+            DirButton(dir="up" :active="isDirActive('up')" class="w-full h-full" @press="onDirDown('up')" @release="onDirUp('up')")
           div(style="grid-area: 2 / 1")
-            DirButton(dir="left" :active="isDirActive('left')" class="w-full h-full" @press="onDir('left')")
+            DirButton(dir="left" :active="isDirActive('left')" class="w-full h-full" @press="onDirDown('left')" @release="onDirUp('left')")
           div(style="grid-area: 2 / 2")
             DirButton(:interact="true" :active="interactActive" class="w-full h-full" @press="onInteract")
           div(style="grid-area: 2 / 3")
-            DirButton(dir="right" :active="isDirActive('right')" class="w-full h-full" @press="onDir('right')")
+            DirButton(dir="right" :active="isDirActive('right')" class="w-full h-full" @press="onDirDown('right')" @release="onDirUp('right')")
           div(style="grid-area: 3 / 2")
-            DirButton(dir="down" :active="isDirActive('down')" class="w-full h-full" @press="onDir('down')")
+            DirButton(dir="down" :active="isDirActive('down')" class="w-full h-full" @press="onDirDown('down')" @release="onDirUp('down')")
 
       //- Bottom-left: mute + settings + meta (hidden during a run)
       div.absolute.pointer-events-auto.z-50.flex.flex-col.items-start.gap-1(

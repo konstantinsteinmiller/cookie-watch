@@ -1,90 +1,64 @@
 /**
- * Cookie Watch — canvas renderer + VFX.
+ * Cookie Watch — canvas renderer + VFX (free-movement revision).
  *
  * Pure view layer: reads the engine's per-frame render model (`game`) and the
- * phase, owns NO game logic. Everything is drawn as crisp programmatic vectors
- * (mouse, cat, cookie, hole, zones, traps) so the game is fully playable before
+ * phase, owns NO game logic. The scene is laid out like the Game & Watch sketch:
+ * a kitchen floor running left→right, the mouse hole at home (left), the giant
+ * cookie on its plate at the goal (right), and the looming Cat-Eye head centred
+ * up top with two long mechanical "tick-tock" arms that swing like pendulums
+ * and STOMP when the cat catches the Mouse moving.
+ *
+ * Everything is crisp programmatic vectors so the game is fully playable before
  * any art lands; each sprite has an image-override hook that swaps to a file in
- * `/public/images/...` the moment one exists (see `imageFor`). DPR scaling is
+ * `/public/images/props/` the moment one exists (see `imageFor`). DPR scaling is
  * applied by the scene; we draw in CSS pixels.
  */
-import { game, phase, type Dir, type CatState, type FxEvent } from '@/use/useCookieGame'
+import { game, phase, type CatState, type FxEvent } from '@/use/useCookieGame'
 import { prependBaseUrl } from '@/utils/function'
 
 // ─── Layout / geometry ───────────────────────────────────────────────────────
 let W = 0
 let H = 0
 let portrait = true
-interface Pt { x: number; y: number }
-let pathPts: Pt[] = []   // [0..seg] hole→cookie
 let unit = 24            // base sizing unit ~ min(W,H)/N
+let floorY = 0           // y of the floor the Mouse walks on
+let homeX = 0            // x of the mouse hole (pos 0)
+let goalX = 0            // x of the cookie (pos 1)
+let headX = 0            // Cat-Eye head centre
+let headY = 0
 
-/** Recompute the path layout for the current viewport + stage segment count. */
 export const configureGeometry = (w: number, h: number): boolean => {
   if (w <= 0 || h <= 0) return false
   W = w; H = h
   portrait = h >= w
   unit = Math.max(14, Math.min(w, h) / 18)
-  buildPath()
+  floorY = portrait ? H * 0.74 : H * 0.72
+  homeX = W * (portrait ? 0.16 : 0.12)
+  goalX = W * (portrait ? 0.84 : 0.88)
+  headX = W * 0.5
+  headY = H * (portrait ? 0.20 : 0.18)
   return true
 }
 
-const buildPath = (): void => {
-  const seg = Math.max(1, game.seg)
-  pathPts = []
-  if (portrait) {
-    const holeY = H * 0.86
-    const topY = H * 0.20
-    const amp = Math.min(W * 0.16, 90)
-    for (let i = 0; i <= seg; i++) {
-      const t = i / seg
-      const y = holeY + (topY - holeY) * t
-      // gentle serpentine for interior nodes; hole + cookie stay centred
-      const wob = (i === 0 || i === seg) ? 0 : Math.sin(t * Math.PI * 1.5) * amp * (i % 2 === 0 ? -1 : 1)
-      pathPts.push({ x: W * 0.5 + wob, y })
-    }
-  } else {
-    const holeX = W * 0.12
-    const cookieX = W * 0.85
-    const amp = Math.min(H * 0.16, 80)
-    for (let i = 0; i <= seg; i++) {
-      const t = i / seg
-      const x = holeX + (cookieX - holeX) * t
-      const wob = (i === 0 || i === seg) ? 0 : Math.sin(t * Math.PI * 1.5) * amp * (i % 2 === 0 ? -1 : 1)
-      pathPts.push({ x, y: H * 0.56 + wob })
-    }
-  }
-}
-
-/** Screen point for a continuous path position p∈[0..seg]. */
-const pointAt = (p: number): Pt => {
-  if (pathPts.length === 0) return { x: W / 2, y: H / 2 }
-  const seg = pathPts.length - 1
-  const cp = Math.max(0, Math.min(seg, p))
-  const i = Math.floor(cp)
-  const f = cp - i
-  const a = pathPts[i]!
-  const b = pathPts[Math.min(seg, i + 1)]!
-  return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f }
-}
+/** Screen x for a continuous track position p∈[0..1] (0 home → 1 cookie). */
+const xAt = (p: number): number => homeX + (goalX - homeX) * Math.max(0, Math.min(1, p))
 
 // ─── Image-override registry (vector fallback until art lands) ────────────────
 const imgCache = new Map<string, HTMLImageElement | null>()
 const imageFor = (name: string): HTMLImageElement | null => {
   if (imgCache.has(name)) return imgCache.get(name) ?? null
-  imgCache.set(name, null) // pending → vector this frame
+  imgCache.set(name, null)
   const img = new Image()
   img.onload = () => imgCache.set(name, img)
   img.onerror = () => imgCache.set(name, null)
   img.src = prependBaseUrl(`images/props/${name}`)
   return null
 }
-/** Warm a set of optional sprite overrides after first paint (no-op if absent). */
 export const warmImages = async (srcs: ReadonlyArray<string>): Promise<void> => {
   for (const s of srcs) imageFor(s)
 }
 export const warmTileImages = async (): Promise<void> => {
-  await warmImages(['cookie.webp', 'mouse.webp', 'cat.webp', 'mouse-hole.webp', 'mousetrap.webp'])
+  await warmImages(['cookie.webp', 'mouse.webp', 'cat.webp', 'mouse-hole.webp'])
 }
 
 // ─── Mouse skin (cosmetic body colour) ───────────────────────────────────────
@@ -129,41 +103,135 @@ let particles: Particle[] = []
 const MAX_PARTICLES = 220
 
 const spawnFx = (e: FxEvent): void => {
-  const at = pointAt(e.at)
-  const cat = pointAt(game.seg)
+  const ax = xAt(e.at)
   switch (e.kind) {
     case 'noise': {
-      // expanding alert ring at the cat + a few jitter sparks
-      particles.push({ x: cat.x, y: cat.y - unit * 1.4, vx: 0, vy: 0, life: 0, max: 520, size: unit * (0.8 + e.power), color: '#ffd23c', kind: 'ring' })
+      particles.push({
+        x: headX,
+        y: headY,
+        vx: 0,
+        vy: 0,
+        life: 0,
+        max: 520,
+        size: unit * (0.8 + e.power),
+        color: '#ffd23c',
+        kind: 'ring'
+      })
       break
     }
     case 'step': {
-      for (let i = 0; i < 3; i++) particles.push({ x: at.x, y: at.y + unit * 0.5, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30, life: 0, max: 360, size: unit * 0.12, color: '#d9c7a0', kind: 'puff' })
+      for (let i = 0; i < 3; i++) particles.push({
+        x: ax,
+        y: floorY,
+        vx: (Math.random() - 0.5) * 40,
+        vy: -20 - Math.random() * 30,
+        life: 0,
+        max: 320,
+        size: unit * 0.12,
+        color: '#d9c7a0',
+        kind: 'puff'
+      })
       break
     }
     case 'crumb': case 'grab': {
-      for (let i = 0; i < 6; i++) particles.push({ x: cat.x, y: cat.y, vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 120, life: 0, max: 620, size: unit * (0.12 + Math.random() * 0.14), color: ['#c98a3c', '#a86a28', '#e0b070'][i % 3]!, kind: 'crumb', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 10 })
+      for (let i = 0; i < 6; i++) particles.push({
+        x: goalX,
+        y: floorY - unit * 1.2,
+        vx: (Math.random() - 0.5) * 160,
+        vy: -60 - Math.random() * 120,
+        life: 0,
+        max: 620,
+        size: unit * (0.12 + Math.random() * 0.14),
+        color: ['#c98a3c', '#a86a28', '#e0b070'][i % 3]!,
+        kind: 'crumb',
+        rot: Math.random() * 6,
+        vr: (Math.random() - 0.5) * 10
+      })
       break
     }
     case 'deposit': {
-      const hole = pointAt(0)
       for (let i = 0; i < Math.round(10 + e.power * 14); i++) {
         const a = Math.random() * Math.PI * 2
-        particles.push({ x: hole.x, y: hole.y, vx: Math.cos(a) * (60 + Math.random() * 160), vy: -Math.abs(Math.sin(a)) * (120 + Math.random() * 140), life: 0, max: 700, size: unit * 0.16, color: '#ffd23c', kind: 'spark' })
+        particles.push({
+          x: homeX,
+          y: floorY,
+          vx: Math.cos(a) * (60 + Math.random() * 160),
+          vy: -Math.abs(Math.sin(a)) * (120 + Math.random() * 140),
+          life: 0,
+          max: 700,
+          size: unit * 0.16,
+          color: '#ffd23c',
+          kind: 'spark'
+        })
       }
-      particles.push({ x: hole.x, y: hole.y - unit * 1.6, vx: 0, vy: -28, life: 0, max: 900, size: unit, color: '#fff3b0', kind: 'text', text: '+100' })
+      particles.push({
+        x: homeX,
+        y: floorY - unit * 1.6,
+        vx: 0,
+        vy: -28,
+        life: 0,
+        max: 900,
+        size: unit,
+        color: '#fff3b0',
+        kind: 'text',
+        text: '+100'
+      })
       break
     }
     case 'pounce': {
-      particles.push({ x: at.x, y: at.y, vx: 0, vy: 0, life: 0, max: 380, size: unit * 2.6, color: '#ff5a4d', kind: 'slash' })
+      particles.push({
+        x: ax,
+        y: floorY,
+        vx: 0,
+        vy: 0,
+        life: 0,
+        max: 380,
+        size: unit * 2.8,
+        color: '#ff5a4d',
+        kind: 'slash'
+      })
+      for (let i = 0; i < 12; i++) particles.push({
+        x: ax,
+        y: floorY,
+        vx: (Math.random() - 0.5) * 280,
+        vy: -Math.random() * 200,
+        life: 0,
+        max: 520,
+        size: unit * 0.2,
+        color: '#d9c7a0',
+        kind: 'puff'
+      })
       break
     }
     case 'escape': {
-      for (let i = 0; i < 16; i++) { const a = Math.random() * Math.PI * 2; particles.push({ x: at.x, y: at.y, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120 - 40, life: 0, max: 600, size: unit * 0.2, color: '#9be8a8', kind: 'spark' }) }
+      for (let i = 0; i < 16; i++) {
+        const a = Math.random() * Math.PI * 2
+        particles.push({
+          x: ax,
+          y: floorY - unit,
+          vx: Math.cos(a) * 120,
+          vy: Math.sin(a) * 120 - 40,
+          life: 0,
+          max: 600,
+          size: unit * 0.2,
+          color: '#9be8a8',
+          kind: 'spark'
+        })
+      }
       break
     }
     case 'trap': {
-      particles.push({ x: at.x, y: at.y, vx: 0, vy: 0, life: 0, max: 320, size: unit * 1.6, color: '#ffffff', kind: 'slash' })
+      particles.push({
+        x: ax,
+        y: floorY,
+        vx: 0,
+        vy: 0,
+        life: 0,
+        max: 320,
+        size: unit * 1.6,
+        color: '#ffffff',
+        kind: 'slash'
+      })
       break
     }
   }
@@ -199,7 +267,7 @@ const updateParticles = (ctx: CanvasRenderingContext2D, dt: number): void => {
       ctx.textAlign = 'center'
       ctx.fillText(p.text || '', p.x, p.y)
     } else {
-      p.vy += (560 * dt) / 1000 // gravity
+      p.vy += (560 * dt) / 1000
       p.x += (p.vx * dt) / 1000
       p.y += (p.vy * dt) / 1000
       if (p.rot != null) p.rot += ((p.vr || 0) * dt) / 1000
@@ -215,155 +283,63 @@ const updateParticles = (ctx: CanvasRenderingContext2D, dt: number): void => {
 }
 
 // ─── Scene background (kitchen counter, night) ───────────────────────────────
-const drawBackground = (ctx: CanvasRenderingContext2D, now: number): void => {
-  // Counter top: warm wood gradient.
+const drawBackground = (ctx: CanvasRenderingContext2D): void => {
   const g = ctx.createLinearGradient(0, 0, 0, H)
-  g.addColorStop(0, '#15321f')
+  g.addColorStop(0, '#16331f')
   g.addColorStop(0.5, '#1c3a26')
-  g.addColorStop(1, '#102a1a')
+  g.addColorStop(1, '#0e271a')
   ctx.fillStyle = g
   ctx.fillRect(0, 0, W, H)
 
-  // Soft moonlight pool behind the cookie.
-  const ck = pointAt(game.seg)
-  const moon = ctx.createRadialGradient(ck.x, ck.y, 0, ck.x, ck.y, Math.max(W, H) * 0.5)
-  moon.addColorStop(0, 'rgba(120,180,140,0.18)')
+  // Moonlight pool behind the cookie.
+  const moon = ctx.createRadialGradient(goalX, floorY - unit, 0, goalX, floorY - unit, Math.max(W, H) * 0.5)
+  moon.addColorStop(0, 'rgba(120,180,140,0.16)')
   moon.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = moon
   ctx.fillRect(0, 0, W, H)
 
-  // Faint plank seams.
-  ctx.strokeStyle = 'rgba(255,255,255,0.03)'
-  ctx.lineWidth = 1
-  const step = Math.max(60, unit * 3)
-  for (let y = step; y < H; y += step) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke() }
-  void now
-}
-
-const drawPath = (ctx: CanvasRenderingContext2D): void => {
-  if (pathPts.length < 2) return
-  ctx.strokeStyle = 'rgba(255,255,255,0.10)'
-  ctx.lineWidth = unit * 1.5
-  ctx.lineCap = 'round'
-  ctx.beginPath()
-  ctx.moveTo(pathPts[0]!.x, pathPts[0]!.y)
-  for (let i = 1; i < pathPts.length; i++) ctx.lineTo(pathPts[i]!.x, pathPts[i]!.y)
-  ctx.stroke()
-  // dashed centre guide
-  ctx.strokeStyle = 'rgba(255,255,255,0.16)'
+  // Floor band + skirting.
+  ctx.fillStyle = 'rgba(0,0,0,0.22)'
+  ctx.fillRect(0, floorY, W, H - floorY)
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'
   ctx.lineWidth = 2
-  ctx.setLineDash([unit * 0.4, unit * 0.5])
-  ctx.stroke()
-  ctx.setLineDash([])
-}
-
-// ─── Zone markers + prompt cue ───────────────────────────────────────────────
-const dirAngle: Record<Dir, number> = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 }
-const drawArrow = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, dir: Dir, color: string): void => {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(dirAngle[dir])
-  ctx.fillStyle = color
   ctx.beginPath()
-  ctx.moveTo(r, 0); ctx.lineTo(-r * 0.55, -r * 0.7); ctx.lineTo(-r * 0.2, 0); ctx.lineTo(-r * 0.55, r * 0.7)
-  ctx.closePath(); ctx.fill()
-  ctx.restore()
+  ctx.moveTo(0, floorY)
+  ctx.lineTo(W, floorY)
+  ctx.stroke()
 }
 
-const drawZones = (ctx: CanvasRenderingContext2D, now: number): void => {
-  const seg = game.seg
-  for (let i = 1; i < seg; i++) {
-    const pt = pathPts[i]!
-    const isHide = game.hideZones.has(i)
-    const isTrap = game.trapZones.has(i)
-    // marker disc
-    ctx.fillStyle = isTrap ? 'rgba(90,30,30,0.5)' : isHide ? 'rgba(40,60,90,0.5)' : 'rgba(0,0,0,0.28)'
-    circle(ctx, pt.x, pt.y, unit * 0.85); ctx.fill()
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 2; ctx.stroke()
-    if (isHide) drawDrawerLeg(ctx, pt.x, pt.y)
-    if (isTrap) drawTrap(ctx, pt.x, pt.y, now)
-  }
-  // Current prompt cue at the NEXT target zone.
-  if (phase.value === 'playing') {
-    const target = game.pos + (game.outbound ? 1 : -1)
-    if (target >= 0 && target <= seg) {
-      const tp = pointAt(target)
-      const pend = game.pending
-      if (pend.kind === 'move' || pend.kind === 'trap') {
-        const dir = pend.kind === 'trap' ? pend.trapDir : pend.seq[pend.pip]
-        const pulse = 1 + Math.sin(now / 140) * 0.08
-        const col = pend.kind === 'trap' ? '#ff5a4d' : '#ffd23c'
-        ctx.save(); ctx.globalAlpha = 0.95
-        rr(ctx, tp.x - unit * 1.0 * pulse, tp.y - unit * 2.4, unit * 2.0 * pulse, unit * 1.5, unit * 0.4)
-        ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fill()
-        ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.stroke()
-        if (dir) drawArrow(ctx, tp.x, tp.y - unit * 1.65, unit * 0.5, dir, col)
-        ctx.restore()
-        // pip row for multi-tap zones
-        if (pend.kind === 'move' && pend.seq.length > 1) {
-          const n = pend.seq.length
-          const pw = unit * 0.3
-          for (let k = 0; k < n; k++) {
-            circle(ctx, tp.x - ((n - 1) * pw) + k * pw * 2, tp.y - unit * 0.5, pw * 0.5)
-            ctx.fillStyle = k < pend.pip ? '#ffd23c' : 'rgba(255,255,255,0.3)'; ctx.fill()
-          }
-        }
-      }
-    }
-  }
-}
-
-const drawDrawerLeg = (ctx: CanvasRenderingContext2D, x: number, y: number): void => {
-  ctx.fillStyle = '#5a3c24'
-  rr(ctx, x - unit * 0.35, y - unit * 1.8, unit * 0.7, unit * 1.6, unit * 0.2); ctx.fill()
-  ctx.fillStyle = 'rgba(0,0,0,0.3)'
-  rr(ctx, x - unit * 0.12, y - unit * 1.7, unit * 0.24, unit * 1.4, unit * 0.1); ctx.fill()
-}
-
-const drawTrap = (ctx: CanvasRenderingContext2D, x: number, y: number, now: number): void => {
-  ctx.fillStyle = '#7a5230'
-  rr(ctx, x - unit * 0.6, y + unit * 0.1, unit * 1.2, unit * 0.5, unit * 0.12); ctx.fill()
-  // snapping bar (animated)
-  const open = (Math.sin(now / 260) + 1) / 2
-  ctx.save(); ctx.translate(x - unit * 0.4, y + unit * 0.2); ctx.rotate(-open * 1.4)
-  ctx.strokeStyle = '#d8d8d8'; ctx.lineWidth = unit * 0.16; ctx.lineCap = 'round'
-  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(unit * 0.9, 0); ctx.stroke()
-  ctx.restore()
-}
-
-// ─── Mouse hole ──────────────────────────────────────────────────────────────
+// ─── Mouse hole (home) ───────────────────────────────────────────────────────
 const drawHole = (ctx: CanvasRenderingContext2D): void => {
-  const p = pathPts[0]!
-  // skirting board panel
+  const x = homeX, y = floorY
   ctx.fillStyle = '#23303f'
-  rr(ctx, p.x - unit * 2.2, p.y - unit * 1.2, unit * 4.4, unit * 2.6, unit * 0.3); ctx.fill()
-  // arched hole
+  rr(ctx, x - unit * 2.0, y - unit * 1.6, unit * 4.0, unit * 1.7, unit * 0.3)
+  ctx.fill()
   ctx.fillStyle = '#05080c'
   ctx.beginPath()
-  ctx.moveTo(p.x - unit * 1.1, p.y + unit * 1.1)
-  ctx.lineTo(p.x - unit * 1.1, p.y)
-  ctx.arc(p.x, p.y, unit * 1.1, Math.PI, 0)
-  ctx.lineTo(p.x + unit * 1.1, p.y + unit * 1.1)
+  ctx.moveTo(x - unit * 1.0, y)
+  ctx.lineTo(x - unit * 1.0, y - unit * 0.8)
+  ctx.arc(x, y - unit * 0.8, unit * 1.0, Math.PI, 0)
+  ctx.lineTo(x + unit * 1.0, y)
   ctx.closePath(); ctx.fill()
-  // inner glow
-  const g = ctx.createRadialGradient(p.x, p.y + unit * 0.4, 0, p.x, p.y + unit * 0.4, unit * 1.2)
-  g.addColorStop(0, 'rgba(255,200,90,0.25)'); g.addColorStop(1, 'rgba(0,0,0,0)')
+  const g = ctx.createRadialGradient(x, y - unit * 0.3, 0, x, y - unit * 0.3, unit * 1.2)
+  g.addColorStop(0, 'rgba(255,200,90,0.22)')
+  g.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = g; ctx.fill()
 }
 
-// ─── Cookie + Cat ────────────────────────────────────────────────────────────
+// ─── Cookie + plate (goal) ─────────────────────────────────────────────────────
 const drawCookie = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void => {
   const frac = Math.max(0.12, game.chunksInCookie / Math.max(1, game.cookieTotal))
   const rr2 = r * (0.55 + 0.45 * frac)
-  // body
   const g = ctx.createRadialGradient(x - rr2 * 0.3, y - rr2 * 0.3, rr2 * 0.2, x, y, rr2)
   g.addColorStop(0, '#e3b873'); g.addColorStop(1, '#b07c3a')
   ctx.fillStyle = g
-  // bitten edge: draw a wedge removed proportional to depletion
   const eaten = (1 - frac) * Math.PI * 1.2
   ctx.beginPath()
   ctx.arc(x, y, rr2, eaten, Math.PI * 2, false)
   if (eaten > 0.01) ctx.lineTo(x, y)
   ctx.closePath(); ctx.fill()
-  // chocolate chips
   ctx.fillStyle = '#4a2b16'
   const chips = 9
   for (let i = 0; i < chips; i++) {
@@ -376,52 +352,170 @@ const drawCookie = (ctx: CanvasRenderingContext2D, x: number, y: number, r: numb
   ctx.strokeStyle = '#8a5d28'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr2, eaten, Math.PI * 2); ctx.stroke()
 }
 
-const drawCat = (ctx: CanvasRenderingContext2D, x: number, y: number, s: number, state: CatState, now: number): void => {
-  const breathe = Math.sin(now / 600) * s * 0.04
-  // body
-  ctx.fillStyle = '#3a3f4a'
-  rr(ctx, x - s * 1.3, y - s * 0.6 + breathe, s * 2.6, s * 1.3, s * 0.6); ctx.fill()
-  // head
-  const hx = x + s * 0.9
-  const hy = y - s * 0.5 + breathe
-  ctx.fillStyle = '#454b58'
-  circle(ctx, hx, hy, s * 0.7); ctx.fill()
-  // ears
-  const earFlick = state === 'stirring' ? Math.sin(now / 120) * 0.3 : 0
-  ctx.fillStyle = '#454b58'
-  for (const sgn of [-1, 1]) {
-    ctx.save(); ctx.translate(hx + sgn * s * 0.4, hy - s * 0.55); ctx.rotate(sgn * (0.2 + earFlick))
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(s * 0.3 * sgn, -s * 0.5); ctx.lineTo(s * 0.5 * sgn, 0); ctx.closePath(); ctx.fill(); ctx.restore()
+const drawPlate = (ctx: CanvasRenderingContext2D): void => {
+  const x = goalX, y = floorY
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'
+  ctx.beginPath()
+  ctx.ellipse(x, y, unit * 2.2, unit * 0.5, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = '#cdd6df'
+  ctx.beginPath()
+  ctx.ellipse(x, y - unit * 0.1, unit * 2.0, unit * 0.42, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'
+  ctx.lineWidth = 2
+  ctx.stroke()
+  drawCookie(ctx, x, y - unit * 1.5, unit * 1.7)
+}
+
+// ─── Cat-Eye head + mechanical arms ────────────────────────────────────────────
+/** One pendulum / stomp arm. `side` −1 = reaches left, +1 = reaches right. */
+const drawArm = (ctx: CanvasRenderingContext2D, side: 1 | -1, now: number): void => {
+  const shoulderX = headX + side * unit * 2.2
+  const shoulderY = headY + unit * 1.4
+  // Rest target: a point out toward this side of the floor.
+  const restX = headX + side * (W * 0.28)
+  const restAng = Math.atan2(floorY - unit * 1.5 - shoulderY, restX - shoulderX)
+  // Idle swing like a metronome; faster as the cat grows alert.
+  const beat = game.catState === 'asleep' ? 900 : game.catState === 'stirring' ? 420 : 600
+  const swingAmp = game.catState === 'asleep' ? 0.10 : 0.16
+  let ang = restAng + Math.sin(now / beat + (side > 0 ? 0 : Math.PI)) * swingAmp
+
+  // Stomp: the active arm drives down to the Mouse's position.
+  const stomping = game.catState === 'alert' && game.stompArm === side
+  let reach = Math.hypot(restX - shoulderX, floorY - unit * 1.5 - shoulderY)
+  if (stomping) {
+    const targetX = xAt(game.renderPos)
+    const targetY = floorY - unit * 0.4
+    const targAng = Math.atan2(targetY - shoulderY, targetX - shoulderX)
+    const t = game.stompT
+    ang = restAng + (targAng - restAng) * t
+    reach = Math.hypot(targetX - shoulderX, targetY - shoulderY) * (0.5 + 0.5 * t)
   }
+
+  const elbowX = shoulderX + Math.cos(ang) * reach * 0.55
+  const elbowY = shoulderY + Math.sin(ang) * reach * 0.55
+  const pawX = shoulderX + Math.cos(ang) * reach
+  const pawY = shoulderY + Math.sin(ang) * reach
+
+  // Segmented mechanical rod.
+  ctx.strokeStyle = stomping ? '#c63a30' : '#5a6170'
+  ctx.lineWidth = unit * 0.34
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  ctx.moveTo(shoulderX, shoulderY)
+  ctx.lineTo(elbowX, elbowY)
+  ctx.lineTo(pawX, pawY)
+  ctx.stroke()
+  // joint bolts
+  ctx.fillStyle = '#2c313c'
+  for (const [jx, jy] of [[shoulderX, shoulderY], [elbowX, elbowY]] as const) {
+    circle(ctx, jx, jy, unit * 0.2)
+    ctx.fill()
+  }
+  // segment notches
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)'
+  ctx.lineWidth = unit * 0.34
+  ctx.setLineDash([unit * 0.12, unit * 0.28])
+  ctx.beginPath()
+  ctx.moveTo(shoulderX, shoulderY)
+  ctx.lineTo(elbowX, elbowY)
+  ctx.lineTo(pawX, pawY)
+  ctx.stroke()
+  ctx.setLineDash([])
+  // paw / fist
+  ctx.fillStyle = stomping ? '#d6463b' : '#454b58'
+  circle(ctx, pawX, pawY, unit * 0.55)
+  ctx.fill()
+  ctx.fillStyle = '#e8b6c2'
+  for (const o of [-0.28, 0, 0.28]) {
+    circle(ctx, pawX + o * unit, pawY + unit * 0.35, unit * 0.12)
+    ctx.fill()
+  }
+}
+
+const drawCatHead = (ctx: CanvasRenderingContext2D, state: CatState, now: number): void => {
+  const s = unit * 2.0
+  const breathe = Math.sin(now / 700) * s * 0.03
+  const y = headY + breathe
+  // head
+  ctx.fillStyle = '#3f4552'
+  circle(ctx, headX, y, s)
+  ctx.fill()
+  // ears
+  const earFlick = state === 'stirring' ? Math.sin(now / 90) * 0.25 : 0
+  ctx.fillStyle = '#3f4552'
+  for (const sgn of [-1, 1]) {
+    ctx.save()
+    ctx.translate(headX + sgn * s * 0.7, y - s * 0.7)
+    ctx.rotate(sgn * (0.2 + earFlick))
+    ctx.beginPath()
+    ctx.moveTo(0, 0)
+    ctx.lineTo(s * 0.45 * sgn, -s * 0.6)
+    ctx.lineTo(s * 0.6 * sgn, 0)
+    ctx.closePath()
+    ctx.fill()
+    ctx.restore()
+  }
+  // cheeks / muzzle
+  ctx.fillStyle = '#4a505e'
+  ctx.beginPath()
+  ctx.ellipse(headX, y + s * 0.35, s * 0.7, s * 0.45, 0, 0, Math.PI * 2)
+  ctx.fill()
   // eyes
-  const eyeY = hy - s * 0.05
+  const eyeY = y - s * 0.1
+  const red = state === 'alert' || state === 'pounce'
   if (state === 'asleep') {
-    ctx.strokeStyle = '#11131a'; ctx.lineWidth = s * 0.08; ctx.lineCap = 'round'
-    for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.arc(hx + sgn * s * 0.28, eyeY, s * 0.16, 0.3, Math.PI - 0.3); ctx.stroke() }
-  } else {
-    const open = state === 'stirring' ? 0.4 : 1
+    ctx.strokeStyle = '#11131a'
+    ctx.lineWidth = s * 0.07
+    ctx.lineCap = 'round'
     for (const sgn of [-1, 1]) {
-      ctx.fillStyle = '#f3e9b0'; circle(ctx, hx + sgn * s * 0.28, eyeY, s * 0.18 * open + s * 0.02); ctx.fill()
-      ctx.fillStyle = (state === 'alert' || state === 'pounce') ? '#ff4d4d' : '#1a1a1a'
-      circle(ctx, hx + sgn * s * 0.28 + (state === 'pounce' ? s * 0.05 : 0), eyeY, s * 0.09 * open + s * 0.02); ctx.fill()
+      ctx.beginPath()
+      ctx.arc(headX + sgn * s * 0.36, eyeY, s * 0.2, 0.3, Math.PI - 0.3)
+      ctx.stroke()
+    }
+  } else {
+    const open = state === 'stirring' ? 0.45 : 1
+    for (const sgn of [-1, 1]) {
+      ctx.fillStyle = '#f3e9b0'
+      ctx.beginPath()
+      ctx.ellipse(headX + sgn * s * 0.36, eyeY, s * 0.26, s * 0.24 * open + s * 0.02, 0, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = red ? '#ff3b3b' : '#1a1a1a'
+      circle(ctx, headX + sgn * s * 0.36, eyeY, s * 0.13 * open + s * 0.02)
+      ctx.fill()
+      if (red) {
+        ctx.fillStyle = 'rgba(255,80,70,0.5)'
+        circle(ctx, headX + sgn * s * 0.36, eyeY, s * 0.3)
+        ctx.fill()
+      }
     }
   }
   // nose
-  ctx.fillStyle = '#e87a90'; circle(ctx, hx + s * 0.62, hy + s * 0.1, s * 0.08); ctx.fill()
-
-  // Zzz bubble while fully asleep (and not fake-sleeping a tell).
+  ctx.fillStyle = '#e87a90'
+  ctx.beginPath()
+  ctx.moveTo(headX - s * 0.1, y + s * 0.2)
+  ctx.lineTo(headX + s * 0.1, y + s * 0.2)
+  ctx.lineTo(headX, y + s * 0.34)
+  ctx.closePath()
+  ctx.fill()
+  // grin when alert (the sketch's wide cat grin)
+  if (red) {
+    ctx.strokeStyle = '#11131a'
+    ctx.lineWidth = s * 0.06
+    ctx.beginPath()
+    ctx.arc(headX, y + s * 0.3, s * 0.4, 0.15, Math.PI - 0.15)
+    ctx.stroke()
+  }
+  // Zzz while asleep
   if (state === 'asleep') {
     ctx.fillStyle = 'rgba(255,255,255,0.85)'
-    ctx.font = `900 ${Math.round(s * 0.5)}px Angry, sans-serif`; ctx.textAlign = 'left'
-    const zb = Math.sin(now / 500) * s * 0.1
-    ctx.fillText('z', hx + s * 0.6, hy - s * 0.7 + zb)
-    ctx.font = `900 ${Math.round(s * 0.7)}px Angry, sans-serif`
-    ctx.fillText('Z', hx + s * 0.95, hy - s * 1.05 - zb)
-  }
-  // Pounce tell: a crouch shadow + twitching tail
-  if (state === 'pounce') {
-    ctx.strokeStyle = 'rgba(255,80,70,0.6)'; ctx.lineWidth = 3
-    circle(ctx, hx, hy, s * (0.9 + Math.sin(now / 90) * 0.1)); ctx.stroke()
+    ctx.font = `900 ${Math.round(s * 0.4)}px Angry, sans-serif`
+    ctx.textAlign = 'left'
+    const zb = Math.sin(now / 500) * s * 0.08
+    ctx.fillText('z', headX + s * 0.9, y - s * 0.8 + zb)
+    ctx.font = `900 ${Math.round(s * 0.6)}px Angry, sans-serif`
+    ctx.fillText('Z', headX + s * 1.2, y - s * 1.15 - zb)
   }
 }
 
@@ -430,13 +524,16 @@ const drawMouse = (ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
   ctx.save()
   ctx.translate(x, y)
   ctx.scale(facing, 1)
-  const bob = game.moving ? Math.abs(Math.sin(now / 90)) * s * 0.12 : Math.sin(now / 700) * s * 0.03
+  const walking = game.moving
+  const bob = walking ? Math.abs(Math.sin(now / (game.running ? 55 : 90))) * s * 0.12 : Math.sin(now / 700) * s * 0.03
   ctx.translate(0, -bob)
+  // crouch flatter while hidden (frozen & safe)
+  if (game.hidden && phase.value === 'playing') ctx.scale(1, 0.86)
   // tail
   ctx.strokeStyle = mouseFur2; ctx.lineWidth = s * 0.12; ctx.lineCap = 'round'
   ctx.beginPath(); ctx.moveTo(-s * 0.7, s * 0.2)
   ctx.quadraticCurveTo(-s * 1.3, s * 0.1 + Math.sin(now / 200) * s * 0.2, -s * 1.1, -s * 0.4); ctx.stroke()
-  // sack of chunks on the back
+  // sack of chunks
   if (carried > 0) {
     const sackR = s * (0.3 + carried * 0.08)
     ctx.fillStyle = '#caa15e'
@@ -471,21 +568,21 @@ const drawMouse = (ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
   for (const dy of [-0.06, 0.02, 0.1]) { ctx.beginPath(); ctx.moveTo(hx + s * 0.42, -s * 0.02 + s * dy); ctx.lineTo(hx + s * 0.9, -s * 0.06 + s * dy * 1.6); ctx.stroke() }
   // feet
   ctx.fillStyle = mouseFur2
-  const fp = game.moving ? Math.sin(now / 90) * s * 0.18 : 0
+  const fp = walking ? Math.sin(now / (game.running ? 55 : 90)) * s * 0.2 : 0
   circle(ctx, -s * 0.2 + fp, s * 0.5, s * 0.12); ctx.fill()
   circle(ctx, s * 0.2 - fp, s * 0.5, s * 0.12); ctx.fill()
   ctx.restore()
 }
 
-// ─── Awareness vignette ──────────────────────────────────────────────────────
-const drawAwarenessVignette = (ctx: CanvasRenderingContext2D, now: number): void => {
-  const aw = game.awareness
-  if (aw < 50) return
-  const k = (aw - 50) / 50
-  const pulse = game.catState === 'alert' || game.catState === 'pounce' ? (Math.sin(now / 120) * 0.5 + 0.5) : 1
+// ─── Danger vignette ───────────────────────────────────────────────────────────
+const drawDangerVignette = (ctx: CanvasRenderingContext2D, now: number): void => {
+  const danger = game.catState === 'awake' || game.catState === 'alert' || game.catState === 'stirring'
+  if (!danger) return
+  const k = game.catState === 'alert' ? 1 : game.catState === 'awake' ? 0.7 : 0.4
+  const pulse = game.catState === 'alert' ? (Math.sin(now / 110) * 0.5 + 0.5) : 1
   const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.7)
   g.addColorStop(0, 'rgba(0,0,0,0)')
-  g.addColorStop(1, `rgba(200,30,30,${0.06 + k * 0.32 * pulse})`)
+  g.addColorStop(1, `rgba(200,30,30,${0.06 + k * 0.3 * pulse})`)
   ctx.fillStyle = g
   ctx.fillRect(0, 0, W, H)
 }
@@ -495,10 +592,8 @@ const drawFrenzy = (ctx: CanvasRenderingContext2D, now: number): void => {
   ctx.fillStyle = 'rgba(8,18,12,0.82)'; ctx.fillRect(0, 0, W, H)
   const cx = W / 2, cy = H * 0.46
   const r = Math.min(W, H) * 0.26
-  // shrinking cookie
   const frac = 1 - game.frenzy / 100
   drawCookie(ctx, cx, cy, r * (0.4 + 0.6 * frac))
-  // mouse zipping around it
   const ang = now / 120
   const mr = r * (0.5 + 0.6 * frac)
   drawMouse(ctx, cx + Math.cos(ang) * mr, cy + Math.sin(ang) * mr, Math.min(W, H) * 0.05, Math.cos(ang) > 0 ? 1 : -1, 0, now, false)
@@ -508,11 +603,10 @@ const drawFrenzy = (ctx: CanvasRenderingContext2D, now: number): void => {
 let lastNow = 0
 export const drawScene = (ctx: CanvasRenderingContext2D, w: number, h: number, now: number): void => {
   if (w !== W || h !== H) configureGeometry(w, h)
-  if (pathPts.length - 1 !== game.seg) buildPath()
   const dt = lastNow ? Math.min(now - lastNow, 50) : 16
   lastNow = now
 
-  drawBackground(ctx, now)
+  drawBackground(ctx)
 
   if (phase.value === 'frenzy') {
     drawFrenzy(ctx, now)
@@ -520,22 +614,21 @@ export const drawScene = (ctx: CanvasRenderingContext2D, w: number, h: number, n
     return
   }
 
-  drawPath(ctx)
+  // Cat arms behind the props, head above everything.
+  drawArm(ctx, -1, now)
+  drawArm(ctx, 1, now)
+
   drawHole(ctx)
-  drawZones(ctx, now)
+  drawPlate(ctx)
 
-  // Cookie + Cat at the far end.
-  const ck = pointAt(game.seg)
-  const cs = Math.min(W, H) * 0.075
-  drawCat(ctx, ck.x + cs * 0.4, ck.y - cs * 1.6, cs, game.catState, now)
-  drawCookie(ctx, ck.x, ck.y, unit * 2.0)
-
-  // Mouse at the tweened path position.
-  const mp = pointAt(game.renderPos)
+  // Mouse on the floor at the smoothed track position.
+  const mx = xAt(game.renderPos)
   const caught = phase.value === 'dead'
-  drawMouse(ctx, mp.x, mp.y, unit * 0.9, game.facing, game.chunksCarried, now, caught)
+  drawMouse(ctx, mx, floorY - unit * 0.55, unit * 0.9, game.facing, game.chunksCarried, now, caught)
+
+  drawCatHead(ctx, game.catState, now)
 
   drainFx()
   updateParticles(ctx, dt)
-  drawAwarenessVignette(ctx, now)
+  drawDangerVignette(ctx, now)
 }
