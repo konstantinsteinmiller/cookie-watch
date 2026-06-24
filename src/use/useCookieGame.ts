@@ -33,10 +33,11 @@ export type LossCause = '' | 'caught' | 'trap' | 'timeout'
 /** Kept for HUD compatibility — only 'interact' / 'none' are used now. */
 export type PendingKind = 'move' | 'interact' | 'trap' | 'none'
 
-export const DIRS: ReadonlyArray<Dir> = ['up', 'down', 'left', 'right']
-/** Which directions push the Mouse forward (toward the cookie) vs back home. */
-const FORWARD_DIRS: ReadonlyArray<Dir> = ['right', 'up']
-const BACK_DIRS: ReadonlyArray<Dir> = ['left', 'down']
+export const DIRS: ReadonlyArray<Dir> = ['left', 'right']
+/** Which directions push the Mouse forward (toward the cookie) vs back home.
+ *  Rev 2: movement is a single left/right axis — no up/down. */
+const FORWARD_DIRS: ReadonlyArray<Dir> = ['right']
+const BACK_DIRS: ReadonlyArray<Dir> = ['left']
 
 /** A transient visual event the renderer pops and animates. */
 export interface FxEvent {
@@ -51,23 +52,36 @@ export interface FxEvent {
 const LIVES_KEY = 'cw_lives'
 const START_LIVES = 3
 
-// ─── Movement tuning ──────────────────────────────────────────────────────────
-const BASE_SPEED = 0.34          // track-units / sec while sneaking (≈3s end-to-end)
-const RUN_MULT = 1.9             // double-tap dash multiplier
+// ─── Movement tuning (Rev 2: single speed + accel / decel) ────────────────────
+// The Mouse now has ONE top speed (the old "run" speed). Holding a direction
+// ramps him up to it over `ACCEL_TIME`; releasing brakes him to a dead stop in
+// `DECEL_TIME` — at which point he flips belly-up and "plays dead" (the freeze).
+const TOP_SPEED = 0.64           // single top speed, track-units / sec (≈1.6s end-to-end)
+const ACCEL_TIME = 0.6           // s of holding to reach full speed
+const DECEL_TIME = 0.12          // s to brake to a standstill on release
+const FAST_SPEED = 0.4           // |speed| above this = the cat wakes FAST
+const SLOW_SPEED = 0.1           // |speed| above this (but ≤FAST) = the cat slowly stirs
 const HEAVY_SLOWDOWN = 0.85      // 4–6 chunks carried → 15% slower (GDD)
 const HOLE_R = 0.05              // |pos| within this of the hole = home/safe
 const COOKIE_R = 0.93            // pos beyond this = at the cookie (can chunk)
-const DOUBLE_TAP_MS = 260        // two presses within this window engage running
+const GRAB_TAP_MS = 280          // auto-grab: ms per "tap" while pressed at the cookie
+const MOVE_EPS = 0.06            // |speed| above this counts as exposed / moving
 const RENDER_LERP_PER_S = 14     // how fast renderPos chases pos
 
 // ─── Cat awareness / state-machine tuning ─────────────────────────────────────
-const AW_RUN_PER_S = 34          // suspicion gained per second while running
-const AW_CHUNK_TAP = 6           // suspicion per greedy chunk tap (fast mashing)
+// Rev 2: suspicion now accrues from the Mouse's *speed*. Creeping (≤SLOW_SPEED)
+// is silent; a steady 0.1–0.4 jog slowly stirs the cat; bolting (>FAST_SPEED)
+// wakes it fast. (See the "Cat's Eyes Indicator" notes in the design doc.)
+const AW_FAST_PER_S = 46         // suspicion / sec while sprinting (>FAST_SPEED)
+const AW_MED_PER_S = 17          // suspicion / sec while jogging (SLOW–FAST range)
 const AW_HESITATE = 22           // suspicion spike if the player idles too long
+// While AWAKE, once the Mouse has fidgeted past this much accumulated travel the
+// Cat's eyes lock on and track his position (design: "track player position if
+// they move too much in the Awakened state").
+const AWAKE_TRACK_TRAVEL = 0.18
 const AW_DECAY_HIDDEN = 22       // suspicion bled off per second while frozen
 const AW_DECAY_HOLE = 40         // …faster while tucked in the hole
 const HESITATE_MS = 9_000
-const CHUNK_EXPOSE_MS = 240      // a chunk tap keeps you "exposed" this long after
 
 // Nap / watch durations (ms). Scaled by stage + difficulty. The cat sleeps in
 // bursts; a `stirring` tell precedes every wake so a watchful player can freeze.
@@ -114,10 +128,15 @@ export const game = {
   pos: 0,                 // continuous track position 0(home)..1(cookie)
   renderPos: 0,           // smoothed position for the renderer
   facing: 1 as 1 | -1,
-  moving: false,          // a direction is held this frame
-  running: false,         // double-tap dash engaged
+  vel: 0,                 // signed velocity along the track (units/sec)
+  speed: 0,               // |vel| — read by the cat AI + renderer
+  moving: false,          // physically in motion this frame
+  running: false,         // kept for compat; true while at/above FAST_SPEED
   hidden: true,           // frozen & safe (no input / at the hole)
-  exposed: false,         // moving OR running OR recently chunking
+  playingDead: true,      // stopped on the floor → belly-up "play dead" pose
+  exposed: false,         // moving fast enough to be spotted
+  catGazeX: 0.5,          // 0..1 track position the Cat's eyes look toward
+  catTracking: false,     // Cat's eyes have locked on and follow the Mouse
   chunksCarried: 0,
   chunksInCookie: 6,
   chunksDeposited: 0,
@@ -187,6 +206,8 @@ let minRunChunks = 99
 let maxAwarenessSeen = 0
 let pouncedAndEscaped = false
 let frenzyStartElapsed = 0
+let grabTimer = 0          // ms accrued toward breaking the next chunk (auto-grab)
+let awakeMoveAccum = 0     // travel since the cat last woke (drives eye-tracking)
 
 // Cat state-machine timers (ms on the `elapsedMs` clock).
 let catStateUntil = 0      // when the current asleep/awake phase ends
@@ -197,8 +218,6 @@ let diffFactor = 1         // difficulty travel/reaction factor
 
 // Held-input tracking (driven by pressDir/releaseDir).
 const heldDirs = new Set<Dir>()
-let lastTapDir: Dir | null = null
-let lastTapMs = -1e9
 
 // Upgrade-derived run modifiers (recomputed each stage).
 let upLightPaws = 0
@@ -231,6 +250,8 @@ const enterAsleep = (relax = true): void => {
   mustFreeze.value = false
   game.stompT = 0
   stompAtMs = 0
+  game.catTracking = false
+  awakeMoveAccum = 0
   if (relax) game.awareness = Math.max(0, game.awareness - 20)
   const base = randRange(NAP_MIN, NAP_MAX) * (1 - napTighten) * diffFactor
   // A jittery, suspicious cat naps shorter.
@@ -296,58 +317,56 @@ const netDir = (): number => {
   return Math.sign(fwd)
 }
 
-/** Begin sneaking in a direction (key-down / pad press). Double-tap → run. */
+/** Begin sneaking in a direction (key-down / hold a screen-half). Rev 2: a single
+ *  press just engages the hold — the Mouse accelerates to one top speed. */
 export const pressDir = (dir: Dir): void => {
   if (phase.value !== 'playing') return
-  const now = elapsedMs
-  if (lastTapDir === dir && now - lastTapMs < DOUBLE_TAP_MS) game.running = true
-  lastTapDir = dir
-  lastTapMs = now
-  lastInputMs = now
+  lastInputMs = elapsedMs
   heldDirs.add(dir)
 }
 
-/** Stop sneaking in a direction (key-up / pad release). */
+/** Stop sneaking in a direction (key-up / release the screen-half). */
 export const releaseDir = (dir: Dir): void => {
   heldDirs.delete(dir)
-  if (heldDirs.size === 0) game.running = false
 }
 
 /** Release every held direction (blur / pause / phase change). */
 export const releaseAllDirs = (): void => {
   heldDirs.clear()
-  game.running = false
 }
 
 // ─── Chunking + depositing ─────────────────────────────────────────────────────
-/** The interact / Space / tap button — break a chunk at the cookie, or devour
- *  during the frenzy. (Depositing at the hole is automatic.) */
+/** Rev 2: chunks break automatically while the Mouse presses into the cookie
+ *  (see `autoGrab` in `step`). The only manual press left is the Eating Frenzy
+ *  mash, so this now just forwards to it. */
 export const pressInteract = (): void => {
-  if (phase.value === 'frenzy') {
-    frenzyTap()
+  if (phase.value === 'frenzy') frenzyTap()
+}
+
+/** Auto-grab: called each frame while a forward press is held at the cookie.
+ *  Breaks one chunk off every `tapsForChunks` × `GRAB_TAP_MS` of contact. */
+const autoGrab = (dt: number): void => {
+  if (game.pos < COOKIE_R || game.chunksCarried >= 6 || game.chunksInCookie <= 0) {
+    grabTimer = 0
+    game.chunkProgress = 0
     return
   }
-  if (phase.value !== 'playing') return
-  if (game.pos < COOKIE_R) return
-  if (game.chunksCarried >= 6 || game.chunksInCookie <= 0) return
-
-  const now = elapsedMs
-  const fast = now - lastChunkTapMs < 130
-  lastChunkTapMs = now
-  lastInputMs = now
-  if (fast) noise(AW_CHUNK_TAP)        // greedy mashing risks waking the cat
-
-  game.chunkProgress += 1
-  pushFx('grab', 1, 0.5)
-  playSound('wood-cut', 0.04, 1 + Math.random() * 0.15)
-  if (game.chunkProgress >= tapsForChunks(game.chunksCarried)) {
+  grabTimer += dt
+  lastInputMs = elapsedMs
+  lastChunkTapMs = elapsedMs
+  const need = tapsForChunks(game.chunksCarried) * GRAB_TAP_MS
+  game.chunkProgress = clamp(grabTimer / need, 0, 1)
+  if (grabTimer >= need) {
+    grabTimer = 0
     game.chunkProgress = 0
     game.chunksInCookie -= 1
     game.chunksCarried += 1
+    pushFx('grab', 1, 0.5)
     pushFx('crumb', 1, 0.8)
+    playSound('wood-cut', 0.04, 1 + Math.random() * 0.15)
     playSound('coin-pickup', 0.035)
+    syncHud()
   }
-  syncHud()
 }
 
 const depositHaul = (): void => {
@@ -375,6 +394,9 @@ const die = (cause: LossCause): void => {
   phase.value = 'dead'
   game.moving = false
   game.running = false
+  game.vel = 0
+  game.speed = 0
+  game.exposed = false
   mustFreeze.value = false
   releaseAllDirs()
 }
@@ -427,10 +449,15 @@ export const resetForStage = (): void => {
   game.pos = 0
   game.renderPos = 0
   game.facing = 1
+  game.vel = 0
+  game.speed = 0
   game.moving = false
   game.running = false
   game.hidden = true
+  game.playingDead = true
   game.exposed = false
+  game.catGazeX = 0.5
+  game.catTracking = false
   game.awareness = 0
   game.catState = 'asleep'
   game.stompT = 0
@@ -449,7 +476,6 @@ export const resetForStage = (): void => {
   diffFactor = 1 / Math.max(0.6, difficultySpeedFactor()) // Easy → longer naps/windups
 
   heldDirs.clear()
-  lastTapDir = null
 
   // Run/scoring bookkeeping.
   runsThisStage.value = 0
@@ -461,6 +487,8 @@ export const resetForStage = (): void => {
   elapsedMs = 0
   lastInputMs = 0
   lastChunkTapMs = -1e9
+  grabTimer = 0
+  awakeMoveAccum = 0
   stompAtMs = 0
 
   cookieTotal.value = game.cookieTotal
@@ -584,31 +612,53 @@ export const step = (dt: number): void => {
   // Timer.
   timeLeft.value = Math.max(0, timeLeft.value - ds)
 
-  // ── Movement ──
+  // ── Movement: hold a direction → accelerate to one top speed; release →
+  //    brake hard to a standstill (then he "plays dead"). ──
   const dir = netDir()
-  game.moving = dir !== 0
-  if (game.moving) {
-    if (dir > 0) game.facing = 1
-    else if (dir < 0) game.facing = -1
-    let spd = BASE_SPEED * difficultySpeedFactor()
-    if (game.running) spd *= RUN_MULT
-    if (game.chunksCarried >= 4) spd *= HEAVY_SLOWDOWN
-    game.pos = clamp(game.pos + dir * spd * ds, 0, 1)
+  let topSpeed = TOP_SPEED * difficultySpeedFactor()
+  if (game.chunksCarried >= 4) topSpeed *= HEAVY_SLOWDOWN
+  const accel = topSpeed / ACCEL_TIME
+  const decel = topSpeed / DECEL_TIME
+  if (dir !== 0) {
+    const target = dir * topSpeed
+    // Accelerate toward target; if reversing, the (faster) brake rate applies.
+    const rate = Math.sign(target - game.vel) === Math.sign(game.vel) || game.vel === 0 ? accel : decel
+    if (game.vel < target) game.vel = Math.min(target, game.vel + rate * ds)
+    else if (game.vel > target) game.vel = Math.max(target, game.vel - rate * ds)
     lastInputMs = elapsedMs
-    if (Math.random() < dt / 90) pushFx('step', game.pos, 0.4)
+  } else {
+    // Released: decelerate to a dead stop.
+    if (game.vel > 0) game.vel = Math.max(0, game.vel - decel * ds)
+    else if (game.vel < 0) game.vel = Math.min(0, game.vel + decel * ds)
+  }
+  game.speed = Math.abs(game.vel)
+  if (game.vel > 0) game.facing = 1
+  else if (game.vel < 0) game.facing = -1
+  game.pos = clamp(game.pos + game.vel * ds, 0, 1)
+  game.moving = game.speed > MOVE_EPS
+  game.running = game.speed >= FAST_SPEED
+  if (game.moving && Math.random() < dt / 90) pushFx('step', game.pos, 0.4)
+
+  // Auto-grab while pressing into the cookie (replaces the old tap-to-chunk).
+  if (dir > 0) autoGrab(dt)
+  else {
+    grabTimer = 0
+    game.chunkProgress = 0
   }
 
-  // ── Exposure: moving / running / fresh chunk tap leaves you visible. ──
-  const recentChunk = elapsedMs - lastChunkTapMs < CHUNK_EXPOSE_MS
+  // ── Exposure: only real motion gives the Mouse away. Stopped on the floor =
+  //    "playing dead" = hidden & safe. ──
   const atHole = game.pos <= HOLE_R
-  game.exposed = !atHole && (game.moving || game.running || recentChunk)
+  game.exposed = !atHole && game.moving
   game.hidden = !game.exposed
+  game.playingDead = game.hidden && !atHole
 
   // Auto-deposit when home with a haul.
   if (atHole && game.chunksCarried > 0) depositHaul()
 
-  // ── Suspicion accrual / decay. ──
-  if (game.running && game.moving) addAwareness(AW_RUN_PER_S * ds)
+  // ── Suspicion accrual / decay, keyed to the Mouse's speed. ──
+  if (!atHole && game.speed > FAST_SPEED) addAwareness(AW_FAST_PER_S * ds)
+  else if (!atHole && game.speed > SLOW_SPEED) addAwareness(AW_MED_PER_S * ds)
   if (atHole) addAwareness(-upHoleDecay * ds)
   else if (game.hidden) addAwareness(-AW_DECAY_HIDDEN * ds)
 
@@ -627,14 +677,23 @@ export const step = (dt: number): void => {
       if (elapsedMs >= stirEndMs) enterAwake()
       break
     case 'awake':
+      // Fidget too much under the cat's open eyes and its gaze locks on.
+      if (game.moving) awakeMoveAccum += game.speed * ds
+      if (awakeMoveAccum >= AWAKE_TRACK_TRAVEL) game.catTracking = true
       if (game.exposed) armStomp()
       else if (elapsedMs >= catStateUntil) enterAsleep(true)
       break
     case 'alert':
+      game.catTracking = true   // mid-stomp the cat is dead-locked on its prey
       game.stompT = stompAtMs > 0 ? clamp(1 - (stompAtMs - elapsedMs) / (STOMP_WINDUP + upPounceBonusMs), 0, 1) : 1
       if (stompAtMs > 0 && elapsedMs >= stompAtMs) resolveStomp()
       break
   }
+
+  // ── Cat eye gaze: drift toward the Mouse when locked on, else look ahead. ──
+  const eyesOpen = game.catState !== 'asleep'
+  const gazeTarget = eyesOpen && game.catTracking ? game.pos : 0.5
+  game.catGazeX += (gazeTarget - game.catGazeX) * Math.min(1, 6 * ds)
   mustFreeze.value = game.catState === 'awake' || game.catState === 'stirring' || game.catState === 'alert'
 
   // Timeout.

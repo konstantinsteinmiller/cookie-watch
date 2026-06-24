@@ -24,10 +24,8 @@ import { startGameplay, stopGameplay } from '@/use/useCrazyGames'
 import { playFirstStartInterstitial } from '@/use/useFirstStartInterstitial'
 
 import StageBadge from '@/components/StageBadge.vue'
-import ScoreBadge from '@/components/atoms/ScoreBadge.vue'
 import AwarenessMeter from '@/components/atoms/AwarenessMeter.vue'
 import LivesBadge from '@/components/atoms/LivesBadge.vue'
-import DirButton from '@/components/atoms/DirButton.vue'
 import CoinBadge from '@/components/organisms/CoinBadge.vue'
 import TreasureChest from '@/components/organisms/TreasureChest.vue'
 import FMuteButton from '@/components/atoms/FMuteButton.vue'
@@ -47,9 +45,9 @@ const cookie = useCookieGame()
 const {
   phase, lossCause, lives, score, timeLeft, awarenessPct, catState,
   chunksCarried, chunksRemaining, chunksDeposited, cookieTotal,
-  expectedDir, pendingKind, interactHint, mustFreeze, frenzyPct, frenzyTimeLeft,
+  mustFreeze, frenzyPct, frenzyTimeLeft,
   reviewData, lastDaringTotal, stageTarget,
-  begin, resetForStage, pressDir, releaseDir, releaseAllDirs, pressInteract,
+  begin, resetForStage, pressDir, releaseDir, releaseAllDirs,
   startFrenzy, frenzyTap, revive, confirmLoss
 } = cookie
 const progress = useEpicProgress()
@@ -117,33 +115,38 @@ const onCanvasDown = (e: PointerEvent): void => {
   else if (phase.value === 'frenzy') frenzyTap()
 }
 
-// Directions held right now (keyboard + on-screen pad), tracked reactively so
-// the pad can highlight whichever way the Mouse is currently sneaking.
-const heldDirs = ref<Set<Dir>>(new Set())
-const setHeld = (dir: Dir, down: boolean): void => {
-  const next = new Set(heldDirs.value)
-  if (down) next.add(dir)
-  else next.delete(dir)
-  heldDirs.value = next
-}
-
 const onDirDown = (dir: Dir): void => {
   if (phase.value !== 'playing') return
-  setHeld(dir, true)
-  pressDir(dir)   // engine handles continuous move + double-tap → run
+  pressDir(dir)   // engine ramps to one top speed while held
 }
 const onDirUp = (dir: Dir): void => {
-  setHeld(dir, false)
   releaseDir(dir)
 }
 const onInteract = (): void => {
-  if (phase.value === 'playing') pressInteract()
-  else if (phase.value === 'frenzy') frenzyTap()
+  if (phase.value === 'frenzy') frenzyTap()
   else if (phase.value === 'idle') void startRun()
 }
 
+// Invisible left/right touch zones (mobile + desktop mouse). Holding a screen
+// half sneaks that way. We deliberately DON'T pointer-capture, so sliding off a
+// half fires pointerleave and releases that direction.
+const onZonePress = (dir: Dir, e: PointerEvent): void => {
+  e.preventDefault()
+  try {
+    window.focus()
+  } catch { /* cross-origin parent — ignore */
+  }
+  if (phase.value !== 'playing') return
+  onDirDown(dir)
+}
+const onZoneRelease = (dir: Dir): void => {
+  onDirUp(dir)
+}
+
+// Rev 2: movement is a single left/right axis. Keyboard keeps ◀ ▶ / A · D for
+// desktop; up/down are gone, and the on-screen pad is replaced by invisible
+// left/right screen-half touch zones.
 const KEY_DIR: Record<string, Dir> = {
-  ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
   ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right'
 }
 // Genuine key-down codes (the OS auto-repeats keydown while held; we ignore
@@ -173,7 +176,6 @@ const onKeyUp = (e: KeyboardEvent): void => {
 // the Mouse doesn't keep sneaking into a stomp while the player is away.
 const onBlur = (): void => {
   downCodes.clear()
-  heldDirs.value = new Set()
   releaseAllDirs()
 }
 
@@ -192,11 +194,6 @@ const showHint = computed(() => phase.value === 'playing' && progress.stage.valu
 const hintText = computed(() => isMobilePortrait.value ? t('hints.tapToMove') : t('hints.keysToMove'))
 const startText = computed(() => isMobilePortrait.value ? t('startTouch') : t('startDesktop'))
 
-// On-screen pad highlight: light up whichever direction is held; otherwise give
-// a gentle pulse on the suggested heading (toward the cookie / back home).
-const isDirActive = (d: Dir): boolean =>
-  heldDirs.value.has(d) || (heldDirs.value.size === 0 && expectedDir.value === d)
-const interactActive = computed(() => pendingKind.value === 'interact' || interactHint.value === 'grab')
 // "Freeze!" warning — the cat is watching and the Mouse must hold still.
 const freezeWarn = computed(() => phase.value === 'playing' && mustFreeze.value)
 
@@ -450,38 +447,55 @@ onUnmounted(() => {
           CoinBadge(ref="coinBadgeRef")
           TreasureChest(:target-el="coinBadgeEl")
 
-      //- Center-top: awareness meter + score + timer + chunk counters
-      div.absolute.left-0.right-0.flex.flex-col.items-center.gap-1(
-        class="z-[5]"
-        :style="{ top: 'calc(3.0rem + env(safe-area-inset-top, 0px))' }"
-      )
-        AwarenessMeter(
-          v-if="phase === 'playing' || phase === 'dead'"
-          :value="awarenessPct"
-          :state="catState"
+      //- Invisible left / right control zones (mobile touch + desktop mouse):
+      //- hold the left half to sneak home, the right half toward the cookie.
+      //- Centred so each covers exactly half the screen.
+      div.absolute.inset-0.flex(class="z-[1]" v-show="phase === 'playing'")
+        div.h-full.pointer-events-auto.touch-none(
+          class="w-1/2"
+          @pointerdown="onZonePress('left', $event)"
+          @pointerup="onZoneRelease('left')"
+          @pointerleave="onZoneRelease('left')"
+          @pointercancel="onZoneRelease('left')"
+          @contextmenu.prevent
         )
-        ScoreBadge(v-if="phase === 'playing' || phase === 'dead'" :score="score")
-        div.flex.items-center.gap-3(v-if="phase === 'playing' || phase === 'dead'")
-          //- timer
-          div.flex.items-center.gap-1.rounded-full.px-2(
-            class="py-0.5 bg-black/40 border border-white/10"
-            :class="lowTime ? 'animate-pulse' : ''"
-          )
-            svg(viewBox="0 0 24 24" class="w-4 h-4" :class="lowTime ? 'text-red-400' : 'text-white/70'" fill="currentColor")
-              path(d="M12 2 a10 10 0 1 0 0.001 0 Z M12 6 v6 l4 2" fill="none" stroke="currentColor" stroke-width="2")
-            span.game-text.font-black.leading-none(class="text-sm sm:text-base" :class="lowTime ? 'text-red-300' : 'text-white'") {{ timeDisplay }}
-          //- chunks carried / cookie remaining
+        div.h-full.pointer-events-auto.touch-none(
+          class="w-1/2"
+          @pointerdown="onZonePress('right', $event)"
+          @pointerup="onZoneRelease('right')"
+          @pointerleave="onZoneRelease('right')"
+          @pointercancel="onZoneRelease('right')"
+          @contextmenu.prevent
+        )
+
+      //- Above the mouse hole (the "door"): time clock on top, score below it,
+      //- then the haul + lives. Kept off-centre so the Cat's face reads clearly.
+      div.absolute.flex.flex-col.items-center.gap-1(
+        v-if="phase === 'playing' || phase === 'dead'"
+        class="z-[5] -translate-x-1/2"
+        :style="{\
+          left: 'calc(14% + env(safe-area-inset-left, 0px))',\
+          top: 'calc(36% + env(safe-area-inset-top, 0px))'\
+        }"
+      )
+        //- time clock (top)
+        div.flex.items-center.gap-1.rounded-full.px-2(
+          class="py-0.5 bg-black/40 border border-white/10"
+          :class="lowTime ? 'animate-pulse' : ''"
+        )
+          svg(viewBox="0 0 24 24" class="w-4 h-4" :class="lowTime ? 'text-red-400' : 'text-white/70'" fill="currentColor")
+            path(d="M12 2 a10 10 0 1 0 0.001 0 Z M12 6 v6 l4 2" fill="none" stroke="currentColor" stroke-width="2")
+          span.game-text.font-black.leading-none(class="text-sm sm:text-base" :class="lowTime ? 'text-red-300' : 'text-white'") {{ timeDisplay }}
+        //- score board (below the clock)
+        div.rounded-lg.border-2.px-3(class="py-0.5 bg-black/50 border-yellow-300/60")
+          span.game-text.font-black.text-yellow-200.leading-none(class="text-2xl sm:text-3xl") {{ score }}
+        //- haul: chunks carried / cookie remaining
+        div.flex.items-center.gap-2
           div.flex.items-center.gap-1.rounded-full.px-2(class="py-0.5 bg-black/40 border border-white/10")
             span.text-base {{ '🍪' }}
             span.game-text.font-black.text-yellow-200.leading-none(class="text-sm sm:text-base") {{ chunksCarried }}/6
           div.flex.items-center.gap-1.rounded-full.px-2(class="py-0.5 bg-black/40 border border-white/10")
             span.game-text.font-black.text-white.leading-none(class="text-xs sm:text-sm") {{ chunksDeposited }}/{{ cookieTotal }}
-
-      //- Lives (top-center, just under the counters)
-      div.absolute.left-0.right-0.flex.justify-center(
-        v-if="phase === 'playing' || phase === 'dead'"
-        :style="{ top: 'calc(10.5rem + env(safe-area-inset-top, 0px))' }"
-      )
         LivesBadge(:value="lives")
 
       //- Tap-to-start prompt
@@ -508,28 +522,13 @@ onUnmounted(() => {
             class="text-2xl sm:text-4xl px-4 py-1 rounded-xl bg-red-700/70 border-2 border-red-300 text-white"
           ) {{ t('hints.freeze') }}
 
-      //- ── D-pad + interact (bottom-center) ────────────────────────────────
+      //- Cat-alertness meter — moved to the bottom, clear of the Cat's face.
       div.absolute.left-0.right-0.flex.justify-center.pointer-events-none(
-        v-show="phase === 'playing'"
+        v-if="phase === 'playing' || phase === 'dead'"
+        class="z-[5]"
         :style="{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }"
       )
-        div.dpad.grid.pointer-events-auto(
-          class="gap-1.5"
-          :style="{\
-            gridTemplateColumns: 'repeat(3, var(--pad))',\
-            gridTemplateRows: 'repeat(3, var(--pad))'\
-          }"
-        )
-          div(style="grid-area: 1 / 2")
-            DirButton(dir="up" :active="isDirActive('up')" class="w-full h-full" @press="onDirDown('up')" @release="onDirUp('up')")
-          div(style="grid-area: 2 / 1")
-            DirButton(dir="left" :active="isDirActive('left')" class="w-full h-full" @press="onDirDown('left')" @release="onDirUp('left')")
-          div(style="grid-area: 2 / 2")
-            DirButton(:interact="true" :active="interactActive" class="w-full h-full" @press="onInteract")
-          div(style="grid-area: 2 / 3")
-            DirButton(dir="right" :active="isDirActive('right')" class="w-full h-full" @press="onDirDown('right')" @release="onDirUp('right')")
-          div(style="grid-area: 3 / 2")
-            DirButton(dir="down" :active="isDirActive('down')" class="w-full h-full" @press="onDirDown('down')" @release="onDirUp('down')")
+        AwarenessMeter(:value="awarenessPct" :state="catState")
 
       //- Bottom-left: mute + settings + meta (hidden during a run)
       div.absolute.pointer-events-auto.z-50.flex.flex-col.items-start.gap-1(
@@ -702,8 +701,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped lang="sass">
-.dpad
-  --pad: clamp(56px, 16vmin, 92px)
 .review-row
   animation: review-in 0.4s ease both
 @keyframes review-in

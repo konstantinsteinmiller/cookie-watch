@@ -16,10 +16,10 @@ export default {
   'crazyGamesOnly': 'This game is only available on',
   'startTouch': 'Tap to Start',
   'startDesktop': 'Click to Start',
-  'startSubhint': 'Hold to sneak, release to hide. Grab cookie chunks and carry them home — and FREEZE when the cat wakes!',
+  'startSubhint': 'Hold a side to sneak, let go to play dead. Press into the cookie to grab chunks, carry them home — and FREEZE when the cat wakes!',
   'hints': {
-    'tapToMove': 'Hold a direction to sneak — let go to hide',
-    'keysToMove': 'Hold WASD / arrows to sneak — let go to hide (double-tap to run)',
+    'tapToMove': 'Hold the left or right side to sneak — let go to play dead',
+    'keysToMove': 'Hold ◀ ▶ or A / D to sneak — let go to play dead',
     'freeze': 'Freeze! Don\'t move!'
   },
   'cat': {

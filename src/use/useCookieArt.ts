@@ -476,17 +476,24 @@ const drawCatHead = (ctx: CanvasRenderingContext2D, state: CatState, now: number
     }
   } else {
     const open = state === 'stirring' ? 0.45 : 1
+    // Rev 2: once the cat has locked on, the pupils slide to track the Mouse's
+    // position (gaze 0 = looking home/left, 1 = looking at the cookie/right) and
+    // dip down toward the floor where the prey is.
+    const tracking = game.catTracking
+    const px = (game.catGazeX - 0.5) * s * 0.30
+    const py = tracking ? s * 0.07 : 0
     for (const sgn of [-1, 1]) {
+      const ex = headX + sgn * s * 0.36
       ctx.fillStyle = '#f3e9b0'
       ctx.beginPath()
-      ctx.ellipse(headX + sgn * s * 0.36, eyeY, s * 0.26, s * 0.24 * open + s * 0.02, 0, 0, Math.PI * 2)
+      ctx.ellipse(ex, eyeY, s * 0.26, s * 0.24 * open + s * 0.02, 0, 0, Math.PI * 2)
       ctx.fill()
       ctx.fillStyle = red ? '#ff3b3b' : '#1a1a1a'
-      circle(ctx, headX + sgn * s * 0.36, eyeY, s * 0.13 * open + s * 0.02)
+      circle(ctx, ex + px, eyeY + py, s * 0.13 * open + s * 0.02)
       ctx.fill()
       if (red) {
         ctx.fillStyle = 'rgba(255,80,70,0.5)'
-        circle(ctx, headX + sgn * s * 0.36, eyeY, s * 0.3)
+        circle(ctx, ex + px, eyeY + py, s * 0.3)
         ctx.fill()
       }
     }
@@ -520,15 +527,19 @@ const drawCatHead = (ctx: CanvasRenderingContext2D, state: CatState, now: number
 }
 
 // ─── Mouse (vectorized) ──────────────────────────────────────────────────────
-const drawMouse = (ctx: CanvasRenderingContext2D, x: number, y: number, s: number, facing: 1 | -1, carried: number, now: number, caught: boolean): void => {
+const drawMouse = (ctx: CanvasRenderingContext2D, x: number, y: number, s: number, facing: 1 | -1, carried: number, now: number, caught: boolean, playDead = false): void => {
   ctx.save()
   ctx.translate(x, y)
   ctx.scale(facing, 1)
   const walking = game.moving
   const bob = walking ? Math.abs(Math.sin(now / (game.running ? 55 : 90))) * s * 0.12 : Math.sin(now / 700) * s * 0.03
   ctx.translate(0, -bob)
-  // crouch flatter while hidden (frozen & safe)
-  if (game.hidden && phase.value === 'playing') ctx.scale(1, 0.86)
+  // Rev 2: when the player stops, the Mouse flips belly-up and "plays dead"
+  // (X over the eyes). Caught keeps the old squashed pose. Hidden but not yet
+  // flat-out still crouches a touch.
+  const xEyes = caught || playDead
+  if (playDead) ctx.scale(1, -1)
+  else if (game.hidden && phase.value === 'playing') ctx.scale(1, 0.86)
   // tail
   ctx.strokeStyle = mouseFur2; ctx.lineWidth = s * 0.12; ctx.lineCap = 'round'
   ctx.beginPath(); ctx.moveTo(-s * 0.7, s * 0.2)
@@ -556,7 +567,7 @@ const drawMouse = (ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
   ctx.fillStyle = '#e8b6c2'
   circle(ctx, hx - s * 0.1, -s * 0.5, s * 0.13); ctx.fill()
   // eye
-  if (caught) {
+  if (xEyes) {
     ctx.strokeStyle = '#11131a'; ctx.lineWidth = s * 0.07
     ctx.beginPath(); ctx.moveTo(hx + s * 0.1, -s * 0.2); ctx.lineTo(hx + s * 0.3, 0); ctx.moveTo(hx + s * 0.3, -s * 0.2); ctx.lineTo(hx + s * 0.1, 0); ctx.stroke()
   } else {
@@ -624,7 +635,8 @@ export const drawScene = (ctx: CanvasRenderingContext2D, w: number, h: number, n
   // Mouse on the floor at the smoothed track position.
   const mx = xAt(game.renderPos)
   const caught = phase.value === 'dead'
-  drawMouse(ctx, mx, floorY - unit * 0.55, unit * 0.9, game.facing, game.chunksCarried, now, caught)
+  const playDead = game.playingDead && phase.value === 'playing'
+  drawMouse(ctx, mx, floorY - unit * 0.55, unit * 0.9, game.facing, game.chunksCarried, now, caught, playDead)
 
   drawCatHead(ctx, game.catState, now)
 

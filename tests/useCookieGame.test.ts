@@ -32,9 +32,8 @@ const playSmartRun = (): void => {
       hold('left')
       G.step(TICK)                              // carry the full haul home
     } else if (g.pos >= 0.93) {
-      hold(null)
-      G.pressInteract()
-      G.step(180)             // fill the sack at the cookie
+      hold('right')             // press into the cookie → auto-grab chunks
+      G.step(TICK)
     } else {
       hold('right')
       G.step(TICK)                            // sneak to the cookie
