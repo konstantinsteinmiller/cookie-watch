@@ -96,7 +96,7 @@ const circle = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number):
 interface Particle {
   x: number; y: number; vx: number; vy: number
   life: number; max: number; size: number; color: string
-  kind: 'spark' | 'ring' | 'crumb' | 'slash' | 'puff' | 'text'
+  kind: 'spark' | 'ring' | 'crumb' | 'slash' | 'puff' | 'text' | 'sweat'
   rot?: number; vr?: number; text?: string
 }
 let particles: Particle[] = []
@@ -350,6 +350,26 @@ const drawCookie = (ctx: CanvasRenderingContext2D, x: number, y: number, r: numb
     }
   }
   ctx.strokeStyle = '#8a5d28'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr2, eaten, Math.PI * 2); ctx.stroke()
+
+  // Rev 3: jagged cracks spread across the cookie as the Mouse taps it open
+  // (Minecraft-style). `crackStage` 1..3 reveals one more crack each time.
+  if (game.crackStage > 0) {
+    const angles = [0.5, 2.6, 4.7]
+    ctx.strokeStyle = 'rgba(46,26,12,0.92)'
+    ctx.lineWidth = Math.max(1.5, rr2 * 0.05)
+    ctx.lineCap = 'round'
+    for (let c = 0; c < Math.min(game.crackStage, angles.length); c++) {
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+      const segs = 4
+      for (let i = 1; i <= segs; i++) {
+        const rad = (i / segs) * rr2 * 0.95
+        const ja = angles[c]! + Math.sin(i * 2.3 + c) * 0.5
+        ctx.lineTo(x + Math.cos(ja) * rad, y + Math.sin(ja) * rad)
+      }
+      ctx.stroke()
+    }
+  }
 }
 
 const drawPlate = (ctx: CanvasRenderingContext2D): void => {
@@ -368,74 +388,60 @@ const drawPlate = (ctx: CanvasRenderingContext2D): void => {
   drawCookie(ctx, x, y - unit * 1.5, unit * 1.7)
 }
 
-// ─── Cat-Eye head + mechanical arms ────────────────────────────────────────────
-/** One pendulum / stomp arm. `side` −1 = reaches left, +1 = reaches right. */
-const drawArm = (ctx: CanvasRenderingContext2D, side: 1 | -1, now: number): void => {
-  const shoulderX = headX + side * unit * 2.2
-  const shoulderY = headY + unit * 1.4
-  // Rest target: a point out toward this side of the floor.
-  const restX = headX + side * (W * 0.28)
-  const restAng = Math.atan2(floorY - unit * 1.5 - shoulderY, restX - shoulderX)
-  // Idle swing like a metronome; faster as the cat grows alert.
-  const beat = game.catState === 'asleep' ? 900 : game.catState === 'stirring' ? 420 : 600
-  const swingAmp = game.catState === 'asleep' ? 0.10 : 0.16
-  let ang = restAng + Math.sin(now / beat + (side > 0 ? 0 : Math.PI)) * swingAmp
+// ─── Cat-Eye head + eye laser (Rev 3) ──────────────────────────────────────────
+/** Screen x where the Mouse is actually drawn (clamped beside the cookie). */
+const mouseScreenX = (): number => Math.min(xAt(game.renderPos), goalX - unit * 2.2)
 
-  // Stomp: the active arm drives down to the Mouse's position.
-  const stomping = game.catState === 'alert' && game.stompArm === side
-  let reach = Math.hypot(restX - shoulderX, floorY - unit * 1.5 - shoulderY)
-  if (stomping) {
-    const targetX = xAt(game.renderPos)
-    const targetY = floorY - unit * 0.4
-    const targAng = Math.atan2(targetY - shoulderY, targetX - shoulderX)
-    const t = game.stompT
-    ang = restAng + (targAng - restAng) * t
-    reach = Math.hypot(targetX - shoulderX, targetY - shoulderY) * (0.5 + 0.5 * t)
-  }
-
-  const elbowX = shoulderX + Math.cos(ang) * reach * 0.55
-  const elbowY = shoulderY + Math.sin(ang) * reach * 0.55
-  const pawX = shoulderX + Math.cos(ang) * reach
-  const pawY = shoulderY + Math.sin(ang) * reach
-
-  // Segmented mechanical rod.
-  ctx.strokeStyle = stomping ? '#c63a30' : '#5a6170'
-  ctx.lineWidth = unit * 0.34
+/** Rev 3: the cat's eye-laser. While `alert` the cannon warms up — twin beams
+ *  thicken and brighten from the eyes onto the Mouse (`stompT` 0→1) — then fire.
+ *  This warm-up IS the warning window the player can still freeze through. */
+const drawLaser = (ctx: CanvasRenderingContext2D, now: number): void => {
+  if (game.catState !== 'alert') return
+  const t = game.stompT
+  const s = unit * CAT_HEAD_UNITS
+  const eyeY = headY - s * 0.1
+  const tx = mouseScreenX()
+  const ty = floorY - unit * 0.7
+  const flicker = 0.7 + 0.3 * Math.sin(now / 30)
   ctx.lineCap = 'round'
-  ctx.beginPath()
-  ctx.moveTo(shoulderX, shoulderY)
-  ctx.lineTo(elbowX, elbowY)
-  ctx.lineTo(pawX, pawY)
-  ctx.stroke()
-  // joint bolts
-  ctx.fillStyle = '#2c313c'
-  for (const [jx, jy] of [[shoulderX, shoulderY], [elbowX, elbowY]] as const) {
-    circle(ctx, jx, jy, unit * 0.2)
+  for (const sgn of [-1, 1]) {
+    const ex = headX + sgn * s * 0.36
+    // Outer glow then a hot white core; both grow with the charge.
+    ctx.strokeStyle = `rgba(255,60,46,${(0.22 + 0.5 * t) * flicker})`
+    ctx.lineWidth = unit * (0.08 + 0.5 * t)
+    ctx.beginPath()
+    ctx.moveTo(ex, eyeY)
+    ctx.lineTo(tx, ty)
+    ctx.stroke()
+    if (t > 0.55) {
+      ctx.strokeStyle = `rgba(255,235,210,${(t - 0.5) * 1.4})`
+      ctx.lineWidth = unit * (0.04 + 0.22 * t)
+      ctx.beginPath()
+      ctx.moveTo(ex, eyeY)
+      ctx.lineTo(tx, ty)
+      ctx.stroke()
+    }
+    // Charging spark sitting on the eye.
+    const g = ctx.createRadialGradient(ex, eyeY, 0, ex, eyeY, s * (0.18 + 0.3 * t))
+    g.addColorStop(0, `rgba(255,210,190,${0.5 + 0.5 * t})`)
+    g.addColorStop(1, 'rgba(255,40,30,0)')
+    ctx.fillStyle = g
+    circle(ctx, ex, eyeY, s * (0.18 + 0.3 * t))
     ctx.fill()
   }
-  // segment notches
-  ctx.strokeStyle = 'rgba(0,0,0,0.35)'
-  ctx.lineWidth = unit * 0.34
-  ctx.setLineDash([unit * 0.12, unit * 0.28])
-  ctx.beginPath()
-  ctx.moveTo(shoulderX, shoulderY)
-  ctx.lineTo(elbowX, elbowY)
-  ctx.lineTo(pawX, pawY)
-  ctx.stroke()
-  ctx.setLineDash([])
-  // paw / fist
-  ctx.fillStyle = stomping ? '#d6463b' : '#454b58'
-  circle(ctx, pawX, pawY, unit * 0.55)
-  ctx.fill()
-  ctx.fillStyle = '#e8b6c2'
-  for (const o of [-0.28, 0, 0.28]) {
-    circle(ctx, pawX + o * unit, pawY + unit * 0.35, unit * 0.12)
+  // Scorch burst at the impact point as the beam tops out.
+  if (t > 0.85) {
+    ctx.fillStyle = `rgba(255,120,90,${(t - 0.85) * 4})`
+    circle(ctx, tx, ty, unit * (0.4 + t))
     ctx.fill()
   }
 }
 
+// Rev 3: the cat's face is the star of the screen, so it's drawn noticeably
+// bigger now that the mechanical arms are gone.
+const CAT_HEAD_UNITS = 2.55
 const drawCatHead = (ctx: CanvasRenderingContext2D, state: CatState, now: number): void => {
-  const s = unit * 2.0
+  const s = unit * CAT_HEAD_UNITS
   const breathe = Math.sin(now / 700) * s * 0.03
   const y = headY + breathe
   // head
@@ -585,6 +591,41 @@ const drawMouse = (ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
   ctx.restore()
 }
 
+// ─── "Tap to crack" prompt (Rev 3) ─────────────────────────────────────────────
+/** A purely-visual button-press prompt that floats above the Mouse while he's at
+ *  the cookie — a finger tapping a disc with an expanding ripple. No text, so it
+ *  needs no translation. */
+const drawTapPrompt = (ctx: CanvasRenderingContext2D, x: number, y: number, now: number): void => {
+  const r = unit * 0.6
+  const pulse = Math.sin(now / 280) * 0.5 + 0.5
+  // ripple
+  ctx.strokeStyle = `rgba(255,231,150,${0.5 * (1 - pulse)})`
+  ctx.lineWidth = unit * 0.08
+  circle(ctx, x, y, r * (1 + 0.55 * pulse))
+  ctx.stroke()
+  // disc
+  ctx.fillStyle = 'rgba(18,28,18,0.8)'
+  circle(ctx, x, y, r)
+  ctx.fill()
+  ctx.strokeStyle = '#ffd23c'
+  ctx.lineWidth = unit * 0.09
+  circle(ctx, x, y, r)
+  ctx.stroke()
+  // finger pressing down (bobs with the pulse)
+  const fy = y - unit * 0.04 + pulse * unit * 0.12
+  ctx.fillStyle = '#ffe9a8'
+  rr(ctx, x - unit * 0.12, fy - unit * 0.4, unit * 0.24, unit * 0.46, unit * 0.12)
+  ctx.fill()
+  circle(ctx, x, fy + unit * 0.08, unit * 0.15)
+  ctx.fill()
+  ctx.strokeStyle = '#ffd23c'
+  ctx.lineWidth = unit * 0.07
+  ctx.beginPath()
+  ctx.moveTo(x - unit * 0.26, fy + unit * 0.28)
+  ctx.lineTo(x + unit * 0.26, fy + unit * 0.28)
+  ctx.stroke()
+}
+
 // ─── Danger vignette ───────────────────────────────────────────────────────────
 const drawDangerVignette = (ctx: CanvasRenderingContext2D, now: number): void => {
   const danger = game.catState === 'awake' || game.catState === 'alert' || game.catState === 'stirring'
@@ -625,20 +666,34 @@ export const drawScene = (ctx: CanvasRenderingContext2D, w: number, h: number, n
     return
   }
 
-  // Cat arms behind the props, head above everything.
-  drawArm(ctx, -1, now)
-  drawArm(ctx, 1, now)
-
   drawHole(ctx)
   drawPlate(ctx)
 
-  // Mouse on the floor at the smoothed track position.
-  const mx = xAt(game.renderPos)
+  // Mouse on the floor at the smoothed track position. At the cookie he's pinned
+  // a little to the LEFT so he stands beside it, never on top of it (Rev 3).
+  const mx = mouseScreenX()
   const caught = phase.value === 'dead'
   const playDead = game.playingDead && phase.value === 'playing'
   drawMouse(ctx, mx, floorY - unit * 0.55, unit * 0.9, game.facing, game.chunksCarried, now, caught, playDead)
 
+  // Rev 3: sweat beads fly off the loaded Mouse, but only while he's hauling.
+  if (game.chunksCarried > 0 && game.moving && Math.random() < dt / 120) {
+    particles.push({
+      x: mx + (Math.random() - 0.5) * unit * 0.6, y: floorY - unit * 1.4,
+      vx: (Math.random() - 0.5) * 30, vy: -40 - Math.random() * 30,
+      life: 0, max: 520, size: unit * 0.1, color: '#bfe6ff', kind: 'sweat'
+    })
+  }
+
   drawCatHead(ctx, game.catState, now)
+  drawLaser(ctx, now)
+
+  // Tap prompt floats above the Mouse while there's still cookie to crack and
+  // he isn't crouched playing dead.
+  if (phase.value === 'playing' && game.atCookie && !game.deadAtCookie &&
+    game.chunksCarried < 6 && game.chunksInCookie > 0) {
+    drawTapPrompt(ctx, mx, floorY - unit * 2.4, now)
+  }
 
   drainFx()
   updateParticles(ctx, dt)

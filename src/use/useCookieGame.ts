@@ -56,17 +56,29 @@ const START_LIVES = 3
 // The Mouse now has ONE top speed (the old "run" speed). Holding a direction
 // ramps him up to it over `ACCEL_TIME`; releasing brakes him to a dead stop in
 // `DECEL_TIME` — at which point he flips belly-up and "plays dead" (the freeze).
-const TOP_SPEED = 0.64           // single top speed, track-units / sec (≈1.6s end-to-end)
+const TOP_SPEED = 0.54           // Rev 3: a touch slower than Rev 2's 0.64.
 const ACCEL_TIME = 0.6           // s of holding to reach full speed
 const DECEL_TIME = 0.12          // s to brake to a standstill on release
 const FAST_SPEED = 0.4           // |speed| above this = the cat wakes FAST
 const SLOW_SPEED = 0.1           // |speed| above this (but ≤FAST) = the cat slowly stirs
-const HEAVY_SLOWDOWN = 0.85      // 4–6 chunks carried → 15% slower (GDD)
+// Rev 3 "Cookie Weight": once the Mouse is hauling chunks home he tops out
+// slower, ramps up/brakes slower, and the cat rouses a little faster.
+const CARRY_SLOWDOWN = 0.66      // carrying chunks → ~⅓ slower top speed
+const CARRY_RAMP_MULT = 1.5      // accel + decel take ~50% longer when loaded
+const CARRY_AW_MULT = 1.35       // return trip: the cat stirs a bit sooner
 const HOLE_R = 0.05              // |pos| within this of the hole = home/safe
 const COOKIE_R = 0.93            // pos beyond this = at the cookie (can chunk)
-const GRAB_TAP_MS = 280          // auto-grab: ms per "tap" while pressed at the cookie
 const MOVE_EPS = 0.06            // |speed| above this counts as exposed / moving
 const RENDER_LERP_PER_S = 14     // how fast renderPos chases pos
+// Rev 3 "Cookie Interaction": tap the cookie to crack it open (Minecraft-style).
+// TAPS_PER_CRACK taps advance one visible crack; CRACKS_PER_ITEM cracks break a
+// chunk free — and every crack is noisier than the last (you can't hide while
+// breaking it, so spacing taps out keeps you alive).
+const TAPS_PER_CRACK = 3
+const CRACKS_PER_ITEM = 3
+const TAPS_PER_ITEM = TAPS_PER_CRACK * CRACKS_PER_ITEM
+const CRACK_NOISE_BASE = 5       // suspicion per tap while on the first crack…
+const CRACK_NOISE_STEP = 4       // …louder by this much on each later crack
 
 // ─── Cat awareness / state-machine tuning ─────────────────────────────────────
 // Rev 2: suspicion now accrues from the Mouse's *speed*. Creeping (≤SLOW_SPEED)
@@ -90,7 +102,7 @@ const NAP_MAX = 5200
 const STIR_MS = 650              // warning window before the eyes snap open
 const WATCH_MIN = 1500
 const WATCH_MAX = 2900
-const STOMP_WINDUP = 360         // ms from "spotted" to the arm landing (escape window)
+const STOMP_WINDUP = 520         // ms the laser cannon warms up — the escape window
 
 const FRENZY_SECONDS = 20
 const FRENZY_1UP_UNDER = 15
@@ -110,10 +122,6 @@ export const stageTimeForStage = (stage: number): number =>
 const napTightenForStage = (stage: number): number =>
   Math.min(0.55, (Math.max(1, stage) - 1) * 0.05)
 
-/** Taps required to break ONE chunk off, given the carried weight (GDD: a
- *  heavy sack makes every grab harder). */
-export const tapsForChunks = (chunks: number): number =>
-  chunks >= 5 ? 3 : chunks >= 3 ? 2 : 1
 /** Per-run greedy multiplier contribution by chunks deposited (GDD table). */
 export const greedyMultForChunks = (chunks: number): number =>
   chunks >= 6 ? 1.5 : chunks >= 5 ? 1.4 : chunks >= 4 ? 1.3 : chunks >= 3 ? 1.25 : 0
@@ -134,6 +142,8 @@ export const game = {
   running: false,         // kept for compat; true while at/above FAST_SPEED
   hidden: true,           // frozen & safe (no input / at the hole)
   playingDead: true,      // stopped on the floor → belly-up "play dead" pose
+  atCookie: false,        // standing beside the cookie (within COOKIE_R)
+  deadAtCookie: false,    // Rev 3: slid finger down at the cookie → playing dead
   exposed: false,         // moving fast enough to be spotted
   catGazeX: 0.5,          // 0..1 track position the Cat's eyes look toward
   catTracking: false,     // Cat's eyes have locked on and follow the Mouse
@@ -141,11 +151,12 @@ export const game = {
   chunksInCookie: 6,
   chunksDeposited: 0,
   cookieTotal: 6,
-  chunkProgress: 0,       // taps accrued toward breaking the next chunk
+  chunkProgress: 0,       // 0..1 taps accrued toward breaking the next chunk
+  crackStage: 0,          // 0..CRACKS_PER_ITEM — how cracked the cookie looks now
   awareness: 0,           // 0..100 suspicion meter
   catState: 'asleep' as CatState,
-  stompT: 0,              // 0..1 progress of an in-flight arm stomp
-  stompArm: 1 as 1 | -1,  // which arm is swinging (renderer only)
+  stompT: 0,              // 0..1 charge of an in-flight eye-laser (Rev 3)
+  stompArm: 1 as 1 | -1,  // legacy field (arms removed in Rev 3)
   frenzy: 0,              // 0..100 cookie devoured (Eating Frenzy)
   fx: [] as FxEvent[]
 }
@@ -176,6 +187,8 @@ export const expectedDir: Ref<Dir | null> = ref(null)
 export const promptSeq: Ref<Dir[]> = ref([])
 export const promptPip: Ref<number> = ref(0)
 export const interactHint: Ref<'grab' | 'deposit' | ''> = ref('')
+/** True while the Mouse is standing at the cookie and can tap to crack it. */
+export const atCookieRef: Ref<boolean> = ref(false)
 export const frenzyPct: Ref<number> = ref(0)
 export const frenzyTimeLeft: Ref<number> = ref(FRENZY_SECONDS)
 /** True while the cat is awake and the Mouse must FREEZE — drives the warning. */
@@ -206,7 +219,7 @@ let minRunChunks = 99
 let maxAwarenessSeen = 0
 let pouncedAndEscaped = false
 let frenzyStartElapsed = 0
-let grabTimer = 0          // ms accrued toward breaking the next chunk (auto-grab)
+let crackTaps = 0          // taps landed on the cookie toward the next chunk (0..9)
 let awakeMoveAccum = 0     // travel since the cat last woke (drives eye-tracking)
 
 // Cat state-machine timers (ms on the `elapsedMs` clock).
@@ -274,8 +287,9 @@ const enterAwake = (): void => {
   playSound('dodge', 0.03, 0.7)
 }
 
-/** The cat spots the moving Mouse → wind up an arm stomp. */
-const armStomp = (): void => {
+/** Rev 3: the cat spots the moving Mouse → its eyes charge up the laser cannon.
+ *  The wind-up is the warning sequence the player can still freeze through. */
+const chargeLaser = (): void => {
   if (game.catState === 'alert' || phase.value !== 'playing') return
   game.catState = 'alert'
   catStateRef.value = 'alert'
@@ -283,11 +297,11 @@ const armStomp = (): void => {
   game.stompT = 0
   stompAtMs = elapsedMs + STOMP_WINDUP + upPounceBonusMs
   triggerShake('small')
-  playSound('obstacle-hit', 0.05, 0.8)
+  playSound('obstacle-hit', 0.05, 1.2)
 }
 
-/** Resolve a wind-up: stomp landed. Caught only if still exposed. */
-const resolveStomp = (): void => {
+/** Resolve the wind-up: the laser fires. Caught only if still exposed. */
+const fireLaser = (): void => {
   stompAtMs = 0
   game.stompT = 1
   if (game.exposed && game.pos > HOLE_R) {
@@ -296,7 +310,7 @@ const resolveStomp = (): void => {
     playSound('explosion-1', 0.07)
     die('caught')
   } else {
-    // Froze in time — the arm slams empty floor.
+    // Froze in time — the beam scorches empty floor.
     pouncedAndEscaped = true
     pushFx('escape', game.pos, 1)
     playSound('celebration-3', 0.05)
@@ -336,37 +350,59 @@ export const releaseAllDirs = (): void => {
 }
 
 // ─── Chunking + depositing ─────────────────────────────────────────────────────
-/** Rev 2: chunks break automatically while the Mouse presses into the cookie
- *  (see `autoGrab` in `step`). The only manual press left is the Eating Frenzy
- *  mash, so this now just forwards to it. */
-export const pressInteract = (): void => {
-  if (phase.value === 'frenzy') frenzyTap()
+/** Reset all crack progress (leaving the cookie, breaking a chunk, new stage). */
+const resetCrack = (): void => {
+  crackTaps = 0
+  game.crackStage = 0
+  game.chunkProgress = 0
 }
 
-/** Auto-grab: called each frame while a forward press is held at the cookie.
- *  Breaks one chunk off every `tapsForChunks` × `GRAB_TAP_MS` of contact. */
-const autoGrab = (dt: number): void => {
-  if (game.pos < COOKIE_R || game.chunksCarried >= 6 || game.chunksInCookie <= 0) {
-    grabTimer = 0
-    game.chunkProgress = 0
-    return
-  }
-  grabTimer += dt
+/** Whether the Mouse is parked at the cookie with room to keep cracking. */
+const canCrack = (): boolean =>
+  game.pos >= COOKIE_R && game.chunksCarried < 6 && game.chunksInCookie > 0
+
+/** Rev 3: tap the cookie to crack it open. Each tap advances one notch; every
+ *  TAPS_PER_CRACK taps deepens the visible crack (and gets LOUDER); after
+ *  CRACKS_PER_ITEM cracks a chunk breaks off into the sack. A tap also wakes the
+ *  Mouse out of its "play dead" crouch (see `playDeadAtCookie`). */
+export const tapCookie = (): void => {
+  if (phase.value !== 'playing') return
+  if (game.deadAtCookie) game.deadAtCookie = false   // tapping resumes the break
+  if (!canCrack()) return
+  // The crack we're currently working on (0 = first … CRACKS_PER_ITEM-1 = last).
+  const crackIdx = Math.floor(crackTaps / TAPS_PER_CRACK)
+  crackTaps += 1
   lastInputMs = elapsedMs
   lastChunkTapMs = elapsedMs
-  const need = tapsForChunks(game.chunksCarried) * GRAB_TAP_MS
-  game.chunkProgress = clamp(grabTimer / need, 0, 1)
-  if (grabTimer >= need) {
-    grabTimer = 0
-    game.chunkProgress = 0
+  game.crackStage = Math.min(CRACKS_PER_ITEM, Math.floor(crackTaps / TAPS_PER_CRACK))
+  game.chunkProgress = clamp(crackTaps / TAPS_PER_ITEM, 0, 1)
+  // Each successive crack is noisier — slowing your taps may be the only way to
+  // survive, since you can't hide while breaking the cookie.
+  noise(CRACK_NOISE_BASE + crackIdx * CRACK_NOISE_STEP)
+  pushFx('crumb', 1, 0.5 + crackIdx * 0.2)
+  playSound('wood-cut', 0.045, 1 + crackIdx * 0.18)
+  if (crackTaps >= TAPS_PER_ITEM) {
+    resetCrack()
     game.chunksInCookie -= 1
     game.chunksCarried += 1
-    pushFx('grab', 1, 0.5)
-    pushFx('crumb', 1, 0.8)
-    playSound('wood-cut', 0.04, 1 + Math.random() * 0.15)
-    playSound('coin-pickup', 0.035)
+    pushFx('grab', 1, 0.8)
+    playSound('coin-pickup', 0.04)
+    syncHud()
+  } else {
     syncHud()
   }
+}
+
+/** Rev 3: slide a finger DOWN at the cookie to drop into a "play dead" crouch
+ *  (the only way to hide while you're up against the cookie). */
+export const playDeadAtCookie = (): void => {
+  if (phase.value !== 'playing' || game.pos < COOKIE_R) return
+  game.deadAtCookie = true
+}
+
+/** Kept for HUD/cheat compatibility: the Eating Frenzy mash routes through here. */
+export const pressInteract = (): void => {
+  if (phase.value === 'frenzy') frenzyTap()
 }
 
 const depositHaul = (): void => {
@@ -426,6 +462,8 @@ export const revive = (): void => {
   game.awareness = 0
   game.stompT = 0
   stompAtMs = 0
+  game.deadAtCookie = false
+  resetCrack()
   lossCause.value = ''
   phase.value = 'playing'
   lastInputMs = elapsedMs
@@ -446,6 +484,7 @@ export const resetForStage = (): void => {
   game.chunksDeposited = 0
   game.chunksCarried = 0
   game.chunkProgress = 0
+  game.crackStage = 0
   game.pos = 0
   game.renderPos = 0
   game.facing = 1
@@ -455,6 +494,8 @@ export const resetForStage = (): void => {
   game.running = false
   game.hidden = true
   game.playingDead = true
+  game.atCookie = false
+  game.deadAtCookie = false
   game.exposed = false
   game.catGazeX = 0.5
   game.catTracking = false
@@ -487,7 +528,7 @@ export const resetForStage = (): void => {
   elapsedMs = 0
   lastInputMs = 0
   lastChunkTapMs = -1e9
-  grabTimer = 0
+  crackTaps = 0
   awakeMoveAccum = 0
   stompAtMs = 0
 
@@ -575,6 +616,7 @@ const syncHud = (): void => {
   catStateRef.value = game.catState
   // On-screen pad cues: a paw glyph at the cookie / a gentle direction nudge.
   const atCookie = game.pos >= COOKIE_R
+  atCookieRef.value = atCookie
   interactHint.value = atCookie && game.chunksCarried < 6 && game.chunksInCookie > 0 ? 'grab' : ''
   pendingKind.value = interactHint.value === 'grab' ? 'interact' : 'none'
   // Suggest heading home once loaded (or cookie spent), else toward the cookie.
@@ -615,10 +657,13 @@ export const step = (dt: number): void => {
   // ── Movement: hold a direction → accelerate to one top speed; release →
   //    brake hard to a standstill (then he "plays dead"). ──
   const dir = netDir()
+  const loaded = game.chunksCarried > 0
   let topSpeed = TOP_SPEED * difficultySpeedFactor()
-  if (game.chunksCarried >= 4) topSpeed *= HEAVY_SLOWDOWN
-  const accel = topSpeed / ACCEL_TIME
-  const decel = topSpeed / DECEL_TIME
+  // Rev 3 "Cookie Weight": a loaded sack is slower to move and slower to ramp.
+  if (loaded) topSpeed *= CARRY_SLOWDOWN
+  const ramp = loaded ? CARRY_RAMP_MULT : 1
+  const accel = topSpeed / (ACCEL_TIME * ramp)
+  const decel = topSpeed / (DECEL_TIME * ramp)
   if (dir !== 0) {
     const target = dir * topSpeed
     // Accelerate toward target; if reversing, the (faster) brake rate applies.
@@ -635,30 +680,44 @@ export const step = (dt: number): void => {
   if (game.vel > 0) game.facing = 1
   else if (game.vel < 0) game.facing = -1
   game.pos = clamp(game.pos + game.vel * ds, 0, 1)
+
+  const atHole = game.pos <= HOLE_R
+  const atCookie = game.pos >= COOKIE_R
+  // At the cookie the Mouse just stands beside it — pressing forward doesn't
+  // walk him into it (cracking is tap-driven, see `tapCookie`).
+  if (atCookie && dir >= 0) {
+    game.vel = 0
+    game.speed = 0
+  }
   game.moving = game.speed > MOVE_EPS
   game.running = game.speed >= FAST_SPEED
   if (game.moving && Math.random() < dt / 90) pushFx('step', game.pos, 0.4)
 
-  // Auto-grab while pressing into the cookie (replaces the old tap-to-chunk).
-  if (dir > 0) autoGrab(dt)
-  else {
-    grabTimer = 0
-    game.chunkProgress = 0
+  // Stepping away from the cookie abandons any half-finished crack + crouch.
+  if (!atCookie) {
+    if (crackTaps > 0) resetCrack()
+    game.deadAtCookie = false
   }
 
-  // ── Exposure: only real motion gives the Mouse away. Stopped on the floor =
-  //    "playing dead" = hidden & safe. ──
-  const atHole = game.pos <= HOLE_R
-  game.exposed = !atHole && game.moving
+  // ── Exposure. On the open floor only real motion gives the Mouse away; at the
+  //    cookie he's exposed while cracking and only safe once he slides into the
+  //    "play dead" crouch (you can't hide while breaking the cookie). ──
+  game.atCookie = atCookie
+  if (atCookieRef.value !== atCookie) atCookieRef.value = atCookie
+  if (atHole) game.exposed = false
+  else if (atCookie) game.exposed = !game.deadAtCookie
+  else game.exposed = game.moving
   game.hidden = !game.exposed
-  game.playingDead = game.hidden && !atHole
+  game.playingDead = atCookie ? game.deadAtCookie : (game.hidden && !atHole)
 
   // Auto-deposit when home with a haul.
   if (atHole && game.chunksCarried > 0) depositHaul()
 
-  // ── Suspicion accrual / decay, keyed to the Mouse's speed. ──
-  if (!atHole && game.speed > FAST_SPEED) addAwareness(AW_FAST_PER_S * ds)
-  else if (!atHole && game.speed > SLOW_SPEED) addAwareness(AW_MED_PER_S * ds)
+  // ── Suspicion accrual / decay, keyed to the Mouse's speed. A loaded sack on
+  //    the return trip rouses the cat a little faster. ──
+  const awMul = game.chunksCarried > 0 ? CARRY_AW_MULT : 1
+  if (!atHole && game.speed > FAST_SPEED) addAwareness(AW_FAST_PER_S * ds * awMul)
+  else if (!atHole && game.speed > SLOW_SPEED) addAwareness(AW_MED_PER_S * ds * awMul)
   if (atHole) addAwareness(-upHoleDecay * ds)
   else if (game.hidden) addAwareness(-AW_DECAY_HIDDEN * ds)
 
@@ -680,13 +739,13 @@ export const step = (dt: number): void => {
       // Fidget too much under the cat's open eyes and its gaze locks on.
       if (game.moving) awakeMoveAccum += game.speed * ds
       if (awakeMoveAccum >= AWAKE_TRACK_TRAVEL) game.catTracking = true
-      if (game.exposed) armStomp()
+      if (game.exposed) chargeLaser()
       else if (elapsedMs >= catStateUntil) enterAsleep(true)
       break
     case 'alert':
-      game.catTracking = true   // mid-stomp the cat is dead-locked on its prey
+      game.catTracking = true   // charging up, the cat's eyes lock on its prey
       game.stompT = stompAtMs > 0 ? clamp(1 - (stompAtMs - elapsedMs) / (STOMP_WINDUP + upPounceBonusMs), 0, 1) : 1
-      if (stompAtMs > 0 && elapsedMs >= stompAtMs) resolveStomp()
+      if (stompAtMs > 0 && elapsedMs >= stompAtMs) fireLaser()
       break
   }
 
@@ -716,7 +775,6 @@ export const step = (dt: number): void => {
   const tI = Math.ceil(timeLeft.value)
   if (tI !== HUD_T.v) HUD_T.v = tI
   // Keep interact/suggestion cues fresh as the Mouse roams.
-  const atCookie = game.pos >= COOKIE_R
   const wantGrab = atCookie && game.chunksCarried < 6 && game.chunksInCookie > 0
   if ((interactHint.value === 'grab') !== wantGrab) syncHud()
 }
@@ -733,7 +791,8 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   ;(window as unknown as { __cw?: unknown }).__cw = {
     game, phase, expectedDir, pendingKind, score, lives, timeLeft, awarenessPct,
     catState: catStateRef, chunksCarried, chunksDeposited, cookieTotal, mustFreeze,
-    pressDir, releaseDir, pressInteract, begin, resetForStage, startFrenzy, frenzyTap
+    atCookie: atCookieRef, pressDir, releaseDir, pressInteract, tapCookie,
+    playDeadAtCookie, begin, resetForStage, startFrenzy, frenzyTap
   }
 }
 
@@ -741,9 +800,11 @@ const useCookieGame = () => ({
   phase, lossCause, lives, score, timeLeft, awarenessPct, catState: catStateRef,
   chunksCarried, chunksRemaining, chunksDeposited, cookieTotal, runsThisStage,
   greedyMultSum, pendingKind, expectedDir, promptSeq, promptPip, interactHint,
-  frenzyPct, frenzyTimeLeft, mustFreeze, reviewData, lastDaringTotal, stageTarget,
+  atCookie: atCookieRef, frenzyPct, frenzyTimeLeft, mustFreeze, reviewData,
+  lastDaringTotal, stageTarget,
   begin, resetForStage, pressDir, releaseDir, releaseAllDirs, pressInteract,
-  startFrenzy, frenzyTap, revive, loseLife, gainLife, confirmLoss, step, clock
+  tapCookie, playDeadAtCookie, startFrenzy, frenzyTap, revive, loseLife, gainLife,
+  confirmLoss, step, clock
 })
 
 export default useCookieGame

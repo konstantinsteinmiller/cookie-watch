@@ -43,11 +43,12 @@ import IconMovie from '@/components/icons/IconMovie.vue'
 const { t } = useI18n()
 const cookie = useCookieGame()
 const {
-  phase, lossCause, lives, score, timeLeft, awarenessPct, catState,
-  chunksCarried, chunksRemaining, chunksDeposited, cookieTotal,
+  phase, lossCause, lives, timeLeft, awarenessPct, catState,
+  chunksDeposited, cookieTotal, atCookie,
   mustFreeze, frenzyPct, frenzyTimeLeft,
   reviewData, lastDaringTotal, stageTarget,
   begin, resetForStage, pressDir, releaseDir, releaseAllDirs,
+  tapCookie, playDeadAtCookie,
   startFrenzy, frenzyTap, revive, confirmLoss
 } = cookie
 const progress = useEpicProgress()
@@ -117,6 +118,11 @@ const onCanvasDown = (e: PointerEvent): void => {
 
 const onDirDown = (dir: Dir): void => {
   if (phase.value !== 'playing') return
+  // At the cookie a forward press is a crack tap, not a walk (Rev 3).
+  if (dir === 'right' && atCookie.value) {
+    tapCookie()
+    return
+  }
   pressDir(dir)   // engine ramps to one top speed while held
 }
 const onDirUp = (dir: Dir): void => {
@@ -130,6 +136,14 @@ const onInteract = (): void => {
 // Invisible left/right touch zones (mobile + desktop mouse). Holding a screen
 // half sneaks that way. We deliberately DON'T pointer-capture, so sliding off a
 // half fires pointerleave and releases that direction.
+//
+// Rev 3: at the cookie the RIGHT zone stops being a "hold to move" and becomes a
+// crack tapper — each press chips the cookie — while dragging a finger DOWN
+// there drops the Mouse into a play-dead crouch (the only way to hide up close).
+const SLIDE_DOWN_PX = 40
+let zoneLastY = 0
+let zoneDownAccum = 0
+
 const onZonePress = (dir: Dir, e: PointerEvent): void => {
   e.preventDefault()
   try {
@@ -137,7 +151,31 @@ const onZonePress = (dir: Dir, e: PointerEvent): void => {
   } catch { /* cross-origin parent — ignore */
   }
   if (phase.value !== 'playing') return
+  if (dir === 'right') {
+    zoneLastY = e.clientY
+    zoneDownAccum = 0
+  }
+  if (dir === 'right' && atCookie.value) {
+    tapCookie()             // discrete crack tap (also resumes from play-dead)
+    return
+  }
   onDirDown(dir)
+}
+const onZoneMove = (dir: Dir, e: PointerEvent): void => {
+  if (dir !== 'right') return
+  const dy = e.clientY - zoneLastY
+  zoneLastY = e.clientY
+  if (phase.value !== 'playing' || !atCookie.value) {
+    zoneDownAccum = 0
+    return
+  }
+  if (dy > 0) zoneDownAccum += dy
+  else if (dy < -2) zoneDownAccum = 0          // moving back up cancels the slide
+  if (zoneDownAccum > SLIDE_DOWN_PX) {
+    zoneDownAccum = 0
+    onDirUp('right')        // stop any walk-in, then crouch
+    playDeadAtCookie()
+  }
 }
 const onZoneRelease = (dir: Dir): void => {
   onDirUp(dir)
@@ -161,6 +199,10 @@ const onKeyDown = (e: KeyboardEvent): void => {
     if (downCodes.has(e.code)) return
     downCodes.add(e.code)
     onDirDown(mapped)
+  } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+    // Rev 3 desktop equivalent of "slide finger down at the cookie" → play dead.
+    e.preventDefault()
+    if (phase.value === 'playing' && atCookie.value) playDeadAtCookie()
   } else if (e.code === 'Space' || e.code === 'Enter') {
     e.preventDefault()
     onInteract()
@@ -443,7 +485,9 @@ onUnmounted(() => {
         }"
       )
         StageBadge(:stage-id="progress.stage.value" :cleared="chunksDeposited" :target="stageTarget")
-        div.flex.flex-col.items-end.gap-4
+        //- Rev 3: coins + chest are cleared from the play screen so the Cat reads
+        //- cleanly; they return between runs (kept mounted for coin animations).
+        div.flex.flex-col.items-end.gap-4(v-show="phase !== 'playing' && phase !== 'dead'")
           CoinBadge(ref="coinBadgeRef")
           TreasureChest(:target-el="coinBadgeEl")
 
@@ -462,14 +506,15 @@ onUnmounted(() => {
         div.h-full.pointer-events-auto.touch-none(
           class="w-1/2"
           @pointerdown="onZonePress('right', $event)"
+          @pointermove="onZoneMove('right', $event)"
           @pointerup="onZoneRelease('right')"
           @pointerleave="onZoneRelease('right')"
           @pointercancel="onZoneRelease('right')"
           @contextmenu.prevent
         )
 
-      //- Above the mouse hole (the "door"): time clock on top, score below it,
-      //- then the haul + lives. Kept off-centre so the Cat's face reads clearly.
+      //- Above the mouse hole (the "door"): just the time clock and the total
+      //- cookies-acquired box (Rev 3 removed the points + haul + lives from here).
       div.absolute.flex.flex-col.items-center.gap-1(
         v-if="phase === 'playing' || phase === 'dead'"
         class="z-[5] -translate-x-1/2"
@@ -486,23 +531,17 @@ onUnmounted(() => {
           svg(viewBox="0 0 24 24" class="w-4 h-4" :class="lowTime ? 'text-red-400' : 'text-white/70'" fill="currentColor")
             path(d="M12 2 a10 10 0 1 0 0.001 0 Z M12 6 v6 l4 2" fill="none" stroke="currentColor" stroke-width="2")
           span.game-text.font-black.leading-none(class="text-sm sm:text-base" :class="lowTime ? 'text-red-300' : 'text-white'") {{ timeDisplay }}
-        //- score board (below the clock)
-        div.rounded-lg.border-2.px-3(class="py-0.5 bg-black/50 border-yellow-300/60")
-          span.game-text.font-black.text-yellow-200.leading-none(class="text-2xl sm:text-3xl") {{ score }}
-        //- haul: chunks carried / cookie remaining
-        div.flex.items-center.gap-2
-          div.flex.items-center.gap-1.rounded-full.px-2(class="py-0.5 bg-black/40 border border-white/10")
-            span.text-base {{ '🍪' }}
-            span.game-text.font-black.text-yellow-200.leading-none(class="text-sm sm:text-base") {{ chunksCarried }}/6
-          div.flex.items-center.gap-1.rounded-full.px-2(class="py-0.5 bg-black/40 border border-white/10")
-            span.game-text.font-black.text-white.leading-none(class="text-xs sm:text-sm") {{ chunksDeposited }}/{{ cookieTotal }}
-        LivesBadge(:value="lives")
+        //- total cookies acquired this stage (kept)
+        div.flex.items-center.gap-1.rounded-full.px-2(class="py-0.5 bg-black/40 border border-white/10")
+          span.text-base {{ '🍪' }}
+          span.game-text.font-black.text-white.leading-none(class="text-sm sm:text-base") {{ chunksDeposited }}/{{ cookieTotal }}
 
       //- Tap-to-start prompt
       div.absolute.inset-0.flex.items-center.justify-center.z-10(v-if="phase === 'idle'" class="pointer-events-none")
         div.text-center.px-6
+          //- Rev 3: the long pre-start instructions are gone; only "Tap to Start"
+          //- remains here (the movement reminder still shows once you're playing).
           div.text-white.font-black.uppercase.tracking-wider.animate-pulse.game-text(class="text-3xl sm:text-5xl mb-2") {{ startText }}
-          div.text-yellow-100.italic.game-text(class="text-sm sm:text-lg opacity-80 max-w-md mx-auto") {{ t('startSubhint') }}
 
       //- Control hint (Hold/Release to sneak) — first stages only
       Transition(name="fade")
@@ -530,16 +569,18 @@ onUnmounted(() => {
       )
         AwarenessMeter(:value="awarenessPct" :state="catState")
 
-      //- Bottom-left: mute + settings + meta (hidden during a run)
+      //- Bottom-left: total player lives during a run (Rev 3); otherwise the
+      //- mute + settings + meta cluster (cleared from the play screen).
       div.absolute.pointer-events-auto.z-50.flex.flex-col.items-start.gap-1(
         :style="{\
           bottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',\
           left: 'calc(0.5rem + env(safe-area-inset-left, 0px))'\
         }"
       )
-        FMuteButton
+        LivesBadge(v-if="phase === 'playing' || phase === 'dead'" :value="lives")
+        FMuteButton(v-show="phase !== 'playing' && phase !== 'frenzy' && phase !== 'dead'")
         button.cursor-pointer.transition-transform.mb-1(
-          v-show="phase !== 'playing' && phase !== 'frenzy'"
+          v-show="phase !== 'playing' && phase !== 'frenzy' && phase !== 'dead'"
           class="hover:scale-[103%] active:scale-90 scale-80 sm:scale-100"
           @click="showOptions = true"
         )
@@ -548,7 +589,7 @@ onUnmounted(() => {
             div.relative.rounded-lg.border-2.flex.items-center.justify-center.p-2(class="bg-gradient-to-b from-[#5cd16d] to-[#2e9a4a] border-[#0a3a1c]")
               svg(viewBox="0 0 24 24" class="w-7 h-7 text-white" fill="currentColor")
                 path(d="M12 4 a1 1 0 0 1 1 1 v1.6 a6 6 0 0 1 1.8 0.7 l1.1 -1.1 a1 1 0 0 1 1.4 1.4 l -1.1 1.1 a6 6 0 0 1 0.7 1.8 H18 a1 1 0 1 1 0 2 h-1.6 a6 6 0 0 1 -0.7 1.8 l1.1 1.1 a1 1 0 0 1 -1.4 1.4 l-1.1 -1.1 a6 6 0 0 1 -1.8 0.7 V18 a1 1 0 1 1 -2 0 v -1.6 a6 6 0 0 1 -1.8 -0.7 l-1.1 1.1 a1 1 0 0 1 -1.4 -1.4 l1.1 -1.1 a6 6 0 0 1 -0.7 -1.8 H6 a1 1 0 1 1 0 -2 h1.6 a6 6 0 0 1 0.7 -1.8 L7.2 7.6 a1 1 0 0 1 1.4 -1.4 l1.1 1.1 a6 6 0 0 1 1.8 -0.7 V5 a1 1 0 0 1 1 -1 Z M12 9 a3 3 0 1 0 0 6 a3 3 0 0 0 0 -6 Z")
-        div.flex.items-end(v-show="phase !== 'playing' && phase !== 'frenzy'" class="gap-0 sm:gap-2")
+        div.flex.items-end(v-show="phase !== 'playing' && phase !== 'frenzy' && phase !== 'dead'" class="gap-0 sm:gap-2")
           DailyRewards(@coins-awarded="fireCoinExplosion")
           MissionsModal(@coins-awarded="fireCoinExplosion")
           AchievementsButton(@coins-awarded="fireCoinExplosion")

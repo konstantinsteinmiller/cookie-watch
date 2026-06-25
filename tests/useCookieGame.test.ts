@@ -6,10 +6,11 @@ import * as G from '@/use/useCookieGame'
 
 const TICK = 60
 
-/** Drive a careful, perfect-reflex run: sneak toward the goal only while the
- *  cat is asleep, freeze the instant it stirs/wakes, grab a full haul at the
- *  cookie and carry it home. Mirrors how the held-key controls feed the engine
- *  (press once → step many frames → release). */
+/** Drive a careful, perfect-reflex run (Rev 3): sneak toward the goal only while
+ *  the cat is asleep, freeze the instant it stirs/wakes, TAP the cookie to crack
+ *  a full haul free, then carry it home. At the cookie, hiding means dropping
+ *  into the play-dead crouch (`playDeadAtCookie`) since you can't freeze-by-
+ *  stopping up close. Mirrors how the controls feed the engine. */
 const playSmartRun = (): void => {
   let current: G.Dir | null = null
   const hold = (dir: G.Dir | null): void => {
@@ -19,20 +20,23 @@ const playSmartRun = (): void => {
     current = dir
   }
   let guard = 0
-  while (G.phase.value === 'playing' && guard++ < 10_000) {
-    const asleep = G.catStateRef.value === 'asleep'
+  while (G.phase.value === 'playing' && guard++ < 20_000) {
     const g = G.game
+    const asleep = G.catStateRef.value === 'asleep'
+    const atCookie = g.pos >= 0.93
+    const sackFull = g.chunksCarried >= 6 || g.chunksInCookie <= 0
     if (!asleep) {
       hold(null)
+      if (atCookie) G.playDeadAtCookie()   // crouch to hide right at the cookie
       G.step(TICK)
       continue
-    }      // freeze & hide
-    const sackFull = g.chunksCarried >= 6 || g.chunksInCookie <= 0
+    }
     if (sackFull && g.chunksCarried > 0) {
       hold('left')
       G.step(TICK)                              // carry the full haul home
-    } else if (g.pos >= 0.93) {
-      hold('right')             // press into the cookie → auto-grab chunks
+    } else if (atCookie) {
+      hold(null)
+      G.tapCookie()             // tap to crack a chunk free, one tap at a time
       G.step(TICK)
     } else {
       hold('right')
@@ -71,15 +75,6 @@ describe('stage configuration', () => {
 })
 
 describe('weight + greedy tables (GDD)', () => {
-  it('maps carried chunks → taps per chunk', () => {
-    expect(G.tapsForChunks(0)).toBe(1)
-    expect(G.tapsForChunks(2)).toBe(1)
-    expect(G.tapsForChunks(3)).toBe(2)
-    expect(G.tapsForChunks(4)).toBe(2)
-    expect(G.tapsForChunks(5)).toBe(3)
-    expect(G.tapsForChunks(6)).toBe(3)
-  })
-
   it('maps run chunks → greedy multiplier contribution', () => {
     expect(G.greedyMultForChunks(2)).toBe(0)
     expect(G.greedyMultForChunks(3)).toBe(1.25)
