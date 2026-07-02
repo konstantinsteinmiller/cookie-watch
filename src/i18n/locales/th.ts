@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'แตะเพื่อทุบคุกกี้',
+    'breakCookieDesktop': 'คลิกเพื่อทุบคุกกี้',
+    'playDeadTouch': 'ปัดลงเพื่อแกล้งตาย',
+    'playDeadDesktop': 'กด ↓ เพื่อแกล้งตาย',
+    'avoidCat': 'อย่าให้แมวจับได้'
+  },
   'ads': {
     'watch': 'ดู', 'revive': 'ชุบชีวิต', 'secondChance': 'โอกาสที่สอง', 'doubleCoins': '2× เหรียญ', 'plusCoins': '+{n} เหรียญ'
   },

@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'Pechenyeni sindirish uchun teging',
+    'breakCookieDesktop': 'Pechenyeni sindirish uchun bosing',
+    'playDeadTouch': 'O‘likka o‘xshab yotish uchun pastga suring',
+    'playDeadDesktop': 'O‘likka o‘xshab yotish uchun ↓ ni bosing',
+    'avoidCat': 'Mushuk sizni tutib olmasin'
+  },
   'ads': {
     'watch': 'Koʻrish', 'revive': 'Tiriltirish', 'secondChance': 'Ikkinchi imkon', 'doubleCoins': '2× tanga', 'plusCoins': '+{n} tanga'
   },

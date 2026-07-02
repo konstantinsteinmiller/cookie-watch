@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'Торкніться, щоб розбити печиво',
+    'breakCookieDesktop': 'Клацніть, щоб розбити печиво',
+    'playDeadTouch': 'Проведіть униз, щоб прикинутися мертвим',
+    'playDeadDesktop': 'Натисніть ↓, щоб прикинутися мертвим',
+    'avoidCat': 'Не дай коту себе спіймати'
+  },
   'ads': {
     'watch': 'Дивитися', 'revive': 'Відродити', 'secondChance': 'Другий шанс', 'doubleCoins': '2× монет', 'plusCoins': '+{n} монет'
   },

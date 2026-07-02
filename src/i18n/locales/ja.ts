@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'タップしてクッキーを割る',
+    'breakCookieDesktop': 'クリックしてクッキーを割る',
+    'playDeadTouch': '下にスワイプして死んだふり',
+    'playDeadDesktop': '↓ を押して死んだふり',
+    'avoidCat': '猫に捕まらないで'
+  },
   'ads': {
     'watch': '見る', 'revive': '復活', 'secondChance': 'セカンドチャンス', 'doubleCoins': '2× コイン', 'plusCoins': '+{n} コイン'
   },

@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'انقر لكسر الكوكي',
+    'breakCookieDesktop': 'اضغط لكسر الكوكي',
+    'playDeadTouch': 'اسحب للأسفل لتتظاهر بالموت',
+    'playDeadDesktop': 'اضغط ↓ لتتظاهر بالموت',
+    'avoidCat': 'لا تدع القطة تمسك بك'
+  },
   'ads': {
     'watch': 'مشاهدة', 'revive': 'إحياء', 'secondChance': 'فرصة ثانية', 'doubleCoins': 'عملات ×2', 'plusCoins': '+{n} عملة'
   },

@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': '点击敲碎饼干',
+    'breakCookieDesktop': '单击敲碎饼干',
+    'playDeadTouch': '向下滑动装死',
+    'playDeadDesktop': '按 ↓ 装死',
+    'avoidCat': '别让猫抓到你'
+  },
   'ads': {
     'watch': '观看', 'revive': '复活', 'secondChance': '第二次机会', 'doubleCoins': '2× 金币', 'plusCoins': '+{n} 金币'
   },

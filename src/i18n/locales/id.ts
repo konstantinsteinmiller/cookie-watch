@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'Ketuk untuk memecahkan kue',
+    'breakCookieDesktop': 'Klik untuk memecahkan kue',
+    'playDeadTouch': 'Geser ke bawah untuk pura-pura mati',
+    'playDeadDesktop': 'Tekan ↓ untuk pura-pura mati',
+    'avoidCat': 'Jangan sampai kucing menangkapmu'
+  },
   'ads': {
     'watch': 'Tonton', 'revive': 'Hidupkan', 'secondChance': 'Kesempatan Kedua', 'doubleCoins': '2× koin', 'plusCoins': '+{n} koin'
   },

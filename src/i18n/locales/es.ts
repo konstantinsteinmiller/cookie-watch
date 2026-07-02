@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'Toca para romper la galleta',
+    'breakCookieDesktop': 'Haz clic para romper la galleta',
+    'playDeadTouch': 'Desliza hacia abajo para hacerte el muerto',
+    'playDeadDesktop': 'Pulsa ↓ para hacerte el muerto',
+    'avoidCat': 'No dejes que el gato te atrape'
+  },
   'ads': {
     'watch': 'Ver', 'revive': 'Revivir', 'secondChance': 'Segunda oportunidad', 'doubleCoins': '2× monedas', 'plusCoins': '+{n} monedas'
   },

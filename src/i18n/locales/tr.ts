@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'Kurabiyeyi kırmak için dokun',
+    'breakCookieDesktop': 'Kurabiyeyi kırmak için tıkla',
+    'playDeadTouch': 'Ölü taklidi yapmak için aşağı kaydır',
+    'playDeadDesktop': 'Ölü taklidi yapmak için ↓ tuşuna bas',
+    'avoidCat': 'Kedinin seni yakalamasına izin verme'
+  },
   'ads': {
     'watch': 'İzle', 'revive': 'Canlandır', 'secondChance': 'İkinci Şans', 'doubleCoins': '2× Para', 'plusCoins': '+{n} para'
   },

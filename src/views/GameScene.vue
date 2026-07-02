@@ -14,7 +14,7 @@ import useBattlePass from '@/use/useBattlePass'
 import { useMusic } from '@/use/useSound'
 import useSounds from '@/use/useSound'
 import { useScreenshake } from '@/use/useScreenshake'
-import { isGamePaused } from '@/use/useGamePause'
+import { isGamePaused, acquireAppPause } from '@/use/useGamePause'
 import { isMobilePortrait } from '@/use/useUser'
 import { spawnCoinExplosion } from '@/use/useCoinExplosion'
 import {
@@ -111,7 +111,7 @@ const startRun = async (): Promise<void> => {
 const onCanvasDown = (e: PointerEvent): void => {
   try { window.focus() } catch { /* cross-origin parent — ignore */ }
   e.preventDefault()
-  if (showResult.value || showSecondChance.value || showReview.value) return
+  if (showResult.value || showSecondChance.value || showReview.value || showInstructions.value) return
   if (phase.value === 'idle') void startRun()
   else if (phase.value === 'frenzy') frenzyTap()
 }
@@ -235,6 +235,49 @@ const firstRunBonusActive = ref(false)
 const showHint = computed(() => phase.value === 'playing' && progress.stage.value < 3)
 const hintText = computed(() => isMobilePortrait.value ? t('hints.tapToMove') : t('hints.keysToMove'))
 const startText = computed(() => isMobilePortrait.value ? t('startTouch') : t('startDesktop'))
+
+// ─── First-level instruction card (Rev 4) ────────────────────────────────────
+// A one-shot tutorial screen shown the very first time the player reaches the
+// cookie in the first kitchen. Two pages: how to break the cookie + play dead,
+// then a "don't get caught" beat. The game is paused (app-pause) while it's up.
+const INSTR_SEEN_KEY = 'cw_instr_seen'
+const showInstructions = ref(false)
+const instrPage = ref(0)
+const instrSeen = ref(getState<boolean>(INSTR_SEEN_KEY, false) === true)
+let releaseInstrPause: (() => void) | null = null
+
+const breakCookieText = computed(() =>
+  isMobilePortrait.value ? t('tutorial.breakCookieTouch') : t('tutorial.breakCookieDesktop'))
+const playDeadText = computed(() =>
+  isMobilePortrait.value ? t('tutorial.playDeadTouch') : t('tutorial.playDeadDesktop'))
+const instrContinueText = computed(() =>
+  isMobilePortrait.value ? t('tapToContinue') : t('clickToContinue'))
+
+const dismissInstructions = (): void => {
+  if (!showInstructions.value) return
+  showInstructions.value = false
+  releaseInstrPause?.()
+  releaseInstrPause = null
+}
+const onInstrContinue = (): void => {
+  if (instrPage.value === 0) {
+    instrPage.value = 1
+    return
+  }
+  instrSeen.value = true
+  setState(INSTR_SEEN_KEY, true)
+  dismissInstructions()
+}
+
+// Surface the card the first time the Mouse stands at the cookie in kitchen 1.
+watch(atCookie, (at) => {
+  if (at && !instrSeen.value && !showInstructions.value &&
+    phase.value === 'playing' && progress.stage.value === 1) {
+    instrPage.value = 0
+    showInstructions.value = true
+    releaseInstrPause = acquireAppPause()
+  }
+})
 
 // "Freeze!" warning — the cat is watching and the Mouse must hold still.
 const freezeWarn = computed(() => phase.value === 'playing' && mustFreeze.value)
@@ -430,6 +473,7 @@ const reviewRows = computed(() => {
 
 watch(phase, (p, prev) => {
   if (p !== 'playing') onBlur()   // leaving play drops any held sneak input
+  if (p !== 'playing') dismissInstructions()   // never leave the card (+ its pause) hanging
   if (p === 'playing' && prev !== 'playing') startBattleMusic()
   if (p === 'dead' && prev === 'playing') void onDeath()
   if (p === 'review' && prev === 'playing') onReview()
@@ -459,6 +503,7 @@ onUnmounted(() => {
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('blur', onBlur)
   clearInterval(tickTimer)
+  dismissInstructions()
   stopBattleMusic()
 })
 </script>
@@ -643,6 +688,35 @@ onUnmounted(() => {
             class="text-xl sm:text-2xl active:scale-95"
             @pointerdown.prevent="frenzyTap"
           ) {{ isMobilePortrait ? t('frenzy.tap') : t('frenzy.click') }}
+
+    //- ── First-level instruction card (Rev 4) ────────────────────────────
+    Transition(name="fade")
+      div.fixed.inset-0.flex.items-center.justify-center.backdrop-blur-md.p-4(
+        v-if="showInstructions"
+        class="z-[120] bg-black/70"
+        :style="{ paddingTop: 'calc(1rem + env(safe-area-inset-top, 0px))', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }"
+        @pointerdown.stop.prevent="onInstrContinue"
+        @contextmenu.prevent
+      )
+        div.flex.flex-col.items-center.gap-5.rounded-2xl.border-2.shadow-2xl.w-full(
+          class="bg-gradient-to-b from-[#16321f] to-[#0a1a10] border-yellow-300 px-6 py-6 max-w-sm"
+        )
+          //- Page 1: break the cookie + play dead, side by side.
+          template(v-if="instrPage === 0")
+            div.flex.items-stretch.justify-center.w-full(class="gap-3 sm:gap-4")
+              div.flex-1.flex.flex-col.items-center.gap-2.text-center
+                div.leading-none(class="text-4xl sm:text-5xl") 🐭🍪
+                span.text-white.game-text(class="text-xs sm:text-sm") {{ breakCookieText }}
+              div.w-px.self-stretch(class="bg-white/20")
+              div.flex-1.flex.flex-col.items-center.gap-2.text-center
+                div.leading-none.rotate-180(class="text-4xl sm:text-5xl") 🐭
+                span.text-white.game-text(class="text-xs sm:text-sm") {{ playDeadText }}
+          //- Page 2: don't get caught.
+          template(v-else)
+            div.flex.flex-col.items-center.gap-3.text-center
+              div.leading-none(class="text-5xl sm:text-6xl") 😾
+              span.text-white.game-text(class="text-sm sm:text-base") {{ t('tutorial.avoidCat') }}
+          div.text-yellow-200.game-text.uppercase.tracking-wider.animate-pulse(class="text-xs sm:text-sm") {{ instrContinueText }}
 
     //- ── Level Review overlay ────────────────────────────────────────────
     Transition(name="fade")

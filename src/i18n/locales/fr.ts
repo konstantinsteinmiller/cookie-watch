@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'Touchez pour casser le cookie',
+    'breakCookieDesktop': 'Cliquez pour casser le cookie',
+    'playDeadTouch': 'Glissez vers le bas pour faire le mort',
+    'playDeadDesktop': 'Appuyez sur ↓ pour faire le mort',
+    'avoidCat': 'Ne te fais pas attraper par le chat'
+  },
   'ads': {
     'watch': 'Regarder', 'revive': 'Revivre', 'secondChance': 'Seconde chance', 'doubleCoins': '2× pièces', 'plusCoins': '+{n} pièces'
   },

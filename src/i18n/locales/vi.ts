@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'Chạm để đập vỡ bánh quy',
+    'breakCookieDesktop': 'Nhấp để đập vỡ bánh quy',
+    'playDeadTouch': 'Vuốt xuống để giả chết',
+    'playDeadDesktop': 'Nhấn ↓ để giả chết',
+    'avoidCat': 'Đừng để mèo bắt được bạn'
+  },
   'ads': {
     'watch': 'Xem', 'revive': 'Hồi sinh', 'secondChance': 'Cơ hội thứ hai', 'doubleCoins': '2× xu', 'plusCoins': '+{n} xu'
   },

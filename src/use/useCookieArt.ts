@@ -36,7 +36,8 @@ export const configureGeometry = (w: number, h: number): boolean => {
   homeX = W * (portrait ? 0.16 : 0.12)
   goalX = W * (portrait ? 0.84 : 0.88)
   headX = W * 0.5
-  headY = H * (portrait ? 0.20 : 0.18)
+  // Rev 4: the Cat sits a little lower on the wall so his face looms closer.
+  headY = H * (portrait ? 0.24 : 0.22)
   return true
 }
 
@@ -438,8 +439,9 @@ const drawLaser = (ctx: CanvasRenderingContext2D, now: number): void => {
 }
 
 // Rev 3: the cat's face is the star of the screen, so it's drawn noticeably
-// bigger now that the mechanical arms are gone.
-const CAT_HEAD_UNITS = 2.55
+// bigger now that the mechanical arms are gone. Rev 4: bumped a little bigger
+// still (and lowered via `headY`) so he looms over the kitchen.
+const CAT_HEAD_UNITS = 2.9
 const drawCatHead = (ctx: CanvasRenderingContext2D, state: CatState, now: number): void => {
   const s = unit * CAT_HEAD_UNITS
   const breathe = Math.sin(now / 700) * s * 0.03

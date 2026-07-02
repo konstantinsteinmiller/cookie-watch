@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': '탭하여 쿠키 부수기',
+    'breakCookieDesktop': '클릭하여 쿠키 부수기',
+    'playDeadTouch': '아래로 밀어 죽은 척하기',
+    'playDeadDesktop': '↓ 눌러 죽은 척하기',
+    'avoidCat': '고양이에게 잡히지 마세요'
+  },
   'ads': {
     'watch': '시청', 'revive': '부활', 'secondChance': '두 번째 기회', 'doubleCoins': '2× 코인', 'plusCoins': '+{n} 코인'
   },

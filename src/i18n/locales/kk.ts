@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'Печеньені сындыру үшін түртіңіз',
+    'breakCookieDesktop': 'Печеньені сындыру үшін басыңыз',
+    'playDeadTouch': 'Өлген болып көріну үшін төмен сырғытыңыз',
+    'playDeadDesktop': 'Өлген болып көріну үшін ↓ басыңыз',
+    'avoidCat': 'Мысыққа ұстатпаңыз'
+  },
   'ads': {
     'watch': 'Көру', 'revive': 'Тірілту', 'secondChance': 'Екінші мүмкіндік', 'doubleCoins': '2× тиын', 'plusCoins': '+{n} тиын'
   },

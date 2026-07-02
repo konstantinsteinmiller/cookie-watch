@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'Tik om de koek te breken',
+    'breakCookieDesktop': 'Klik om de koek te breken',
+    'playDeadTouch': 'Veeg omlaag om dood te spelen',
+    'playDeadDesktop': 'Druk op ↓ om dood te spelen',
+    'avoidCat': 'Laat de kat je niet pakken'
+  },
   'ads': {
     'watch': 'Bekijk', 'revive': 'Herleven', 'secondChance': 'Tweede kans', 'doubleCoins': '2× munten', 'plusCoins': '+{n} munten'
   },

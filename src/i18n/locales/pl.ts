@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'Dotknij, aby rozbić ciastko',
+    'breakCookieDesktop': 'Kliknij, aby rozbić ciastko',
+    'playDeadTouch': 'Przesuń w dół, aby udawać martwego',
+    'playDeadDesktop': 'Naciśnij ↓, aby udawać martwego',
+    'avoidCat': 'Nie daj się złapać kotu'
+  },
   'ads': {
     'watch': 'Obejrzyj', 'revive': 'Wskrześ', 'secondChance': 'Druga szansa', 'doubleCoins': '2× monety', 'plusCoins': '+{n} monet'
   },

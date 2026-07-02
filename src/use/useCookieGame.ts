@@ -221,6 +221,10 @@ let pouncedAndEscaped = false
 let frenzyStartElapsed = 0
 let crackTaps = 0          // taps landed on the cookie toward the next chunk (0..9)
 let awakeMoveAccum = 0     // travel since the cat last woke (drives eye-tracking)
+// Rev 4: the Cat sleeps through the whole outbound leg ("inactive on the first
+// half of the run"). It only becomes able to wake once the Mouse has first
+// reached the cookie; after that it stirs from cracking + rouses on the way home.
+let reachedCookie = false
 
 // Cat state-machine timers (ms on the `elapsedMs` clock).
 let catStateUntil = 0      // when the current asleep/awake phase ends
@@ -530,6 +534,7 @@ export const resetForStage = (): void => {
   lastChunkTapMs = -1e9
   crackTaps = 0
   awakeMoveAccum = 0
+  reachedCookie = false
   stompAtMs = 0
 
   cookieTotal.value = game.cookieTotal
@@ -683,11 +688,21 @@ export const step = (dt: number): void => {
 
   const atHole = game.pos <= HOLE_R
   const atCookie = game.pos >= COOKIE_R
-  // At the cookie the Mouse just stands beside it — pressing forward doesn't
-  // walk him into it (cracking is tap-driven, see `tapCookie`).
+  // Rev 4: the Cat dozes through the whole outbound leg. The instant the Mouse
+  // first reaches the cookie the Cat becomes "active" (a fresh nap starts) so
+  // that cracking can stir it and it rouses again on the return trip home.
+  if (atCookie && !reachedCookie) {
+    reachedCookie = true
+    enterAsleep(false)
+  }
+  // At the cookie the Mouse just stands BESIDE it — pressing forward doesn't
+  // walk him into it (cracking is tap-driven, see `tapCookie`). Rev 4: rest a
+  // step off the plate instead of jamming against the far wall (felt "sticky"),
+  // so a left press peels away cleanly and he never looks glued on top.
   if (atCookie && dir >= 0) {
     game.vel = 0
     game.speed = 0
+    if (game.pos > COOKIE_R) game.pos = COOKIE_R
   }
   game.moving = game.speed > MOVE_EPS
   game.running = game.speed >= FAST_SPEED
@@ -715,14 +730,17 @@ export const step = (dt: number): void => {
 
   // ── Suspicion accrual / decay, keyed to the Mouse's speed. A loaded sack on
   //    the return trip rouses the cat a little faster. ──
+  // Rev 4: nothing the Mouse does on the outbound leg registers — the Cat is
+  // dead asleep until the cookie is first reached, so suspicion only builds
+  // from that point on (cracking, and the noisy loaded trip home).
   const awMul = game.chunksCarried > 0 ? CARRY_AW_MULT : 1
-  if (!atHole && game.speed > FAST_SPEED) addAwareness(AW_FAST_PER_S * ds * awMul)
-  else if (!atHole && game.speed > SLOW_SPEED) addAwareness(AW_MED_PER_S * ds * awMul)
+  if (reachedCookie && !atHole && game.speed > FAST_SPEED) addAwareness(AW_FAST_PER_S * ds * awMul)
+  else if (reachedCookie && !atHole && game.speed > SLOW_SPEED) addAwareness(AW_MED_PER_S * ds * awMul)
   if (atHole) addAwareness(-upHoleDecay * ds)
   else if (game.hidden) addAwareness(-AW_DECAY_HIDDEN * ds)
 
-  // Hesitation: idling too long away from the hole rouses the cat.
-  if (!atHole && elapsedMs - lastInputMs > HESITATE_MS) {
+  // Hesitation: idling too long away from the hole rouses the cat (once active).
+  if (reachedCookie && !atHole && elapsedMs - lastInputMs > HESITATE_MS) {
     lastInputMs = elapsedMs
     noise(AW_HESITATE)
   }
@@ -730,7 +748,9 @@ export const step = (dt: number): void => {
   // ── Cat state machine. ──
   switch (game.catState) {
     case 'asleep':
-      if (elapsedMs >= catStateUntil || game.awareness >= 100) enterStirring()
+      // Rev 4: stays soundly asleep for the whole outbound leg — only once the
+      // cookie has been reached can a full nap / max suspicion wake it.
+      if (reachedCookie && (elapsedMs >= catStateUntil || game.awareness >= 100)) enterStirring()
       break
     case 'stirring':
       if (elapsedMs >= stirEndMs) enterAwake()

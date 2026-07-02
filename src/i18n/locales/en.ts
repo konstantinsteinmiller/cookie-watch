@@ -22,6 +22,13 @@ export default {
     'keysToMove': 'Hold ◀ ▶ or A / D to sneak — let go to play dead',
     'freeze': 'Freeze! Don\'t move!'
   },
+  'tutorial': {
+    'breakCookieTouch': 'Tap to break the cookie',
+    'breakCookieDesktop': 'Click to break the cookie',
+    'playDeadTouch': 'Swipe down to play dead',
+    'playDeadDesktop': 'Press ↓ to play dead',
+    'avoidCat': 'Don’t let the cat catch you'
+  },
   'cat': {
     'asleep': 'Asleep',
     'stirring': 'Stirring',

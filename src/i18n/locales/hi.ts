@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'कुकी तोड़ने के लिए टैप करें',
+    'breakCookieDesktop': 'कुकी तोड़ने के लिए क्लिक करें',
+    'playDeadTouch': 'मरने का नाटक करने के लिए नीचे स्वाइप करें',
+    'playDeadDesktop': 'मरने का नाटक करने के लिए ↓ दबाएँ',
+    'avoidCat': 'बिल्ली को अपने आप को पकड़ने न दें'
+  },
   'ads': {
     'watch': 'देखें', 'revive': 'पुनर्जीवित', 'secondChance': 'दूसरा मौका', 'doubleCoins': '2× सिक्के', 'plusCoins': '+{n} सिक्के'
   },

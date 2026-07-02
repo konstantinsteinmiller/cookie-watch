@@ -1,4 +1,11 @@
 export default {
+  'tutorial': {
+    'breakCookieTouch': 'Tippen, um den Keks zu knacken',
+    'breakCookieDesktop': 'Klicken, um den Keks zu knacken',
+    'playDeadTouch': 'Nach unten wischen, um dich totzustellen',
+    'playDeadDesktop': '↓ drücken, um dich totzustellen',
+    'avoidCat': 'Lass dich nicht von der Katze erwischen'
+  },
   'ads': {
     'watch': 'Ansehen', 'revive': 'Wiederbeleben', 'secondChance': 'Zweite Chance', 'doubleCoins': '2× Münzen', 'plusCoins': '+{n} Münzen'
   },
