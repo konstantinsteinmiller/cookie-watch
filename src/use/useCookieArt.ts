@@ -44,11 +44,10 @@ export const configureGeometry = (w: number, h: number): boolean => {
   homeX = W * (portrait ? 0.16 : 0.12)
   goalX = W * (portrait ? 0.84 : 0.88)
   headX = W * 0.5
-  // The Green/Red Light sits above the ears at `headY - CAT_HEAD_UNITS*1.45`, and
-  // it is the single most important read on the screen — so the head can never
-  // ride high enough to push it off the top edge.
-  const lightRoom = unit * CAT_HEAD_UNITS * 1.45 + unit * 0.9
-  headY = Math.max(H * (portrait ? 0.24 : 0.22), lightRoom)
+  // The ears and the sleeping Zzz ride well above the head's centre, so it can
+  // never sit high enough to push them off the top edge.
+  const headRoom = unit * CAT_HEAD_UNITS * 1.45 + unit * 0.9
+  headY = Math.max(H * (portrait ? 0.24 : 0.22), headRoom)
   return true
 }
 
@@ -642,8 +641,9 @@ const drawLaser = (ctx: CanvasRenderingContext2D, now: number): void => {
 }
 
 /** Cat-Eyes: a mechanical cat head styled after a Felix-the-Cat wall clock.
- *  Rev 5 leaves it exactly two states — asleep (green light) and awake (red) —
- *  with a shake as the wake-up telegraph and a quiver while enraged. */
+ *  Rev 5 leaves it exactly two states — asleep (closed eyes, snoring) and awake
+ *  (wide red eyes, grinning) — with a shake as the wake-up telegraph and a quiver
+ *  while enraged. The head itself IS the read; there is no signal lamp above it. */
 const drawCatHead = (ctx: CanvasRenderingContext2D, now: number): void => {
   const s = unit * CAT_HEAD_UNITS
   const awake = game.catState === 'awake'
@@ -736,19 +736,6 @@ const drawCatHead = (ctx: CanvasRenderingContext2D, now: number): void => {
     ctx.fillText('Z', s * 1.2, -s * 1.15 - zb)
   }
   ctx.restore()
-
-  // The green / red light itself — the single clearest read of the Cat's state.
-  const lightY = headY - s * 1.45
-  const on = awake ? '#ff3b3b' : '#5cd16d'
-  const glow = ctx.createRadialGradient(headX, lightY, 0, headX, lightY, s * 0.7)
-  glow.addColorStop(0, awake ? 'rgba(255,60,50,0.75)' : 'rgba(90,220,110,0.6)')
-  glow.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.fillStyle = glow
-  circle(ctx, headX, lightY, s * 0.7)
-  ctx.fill()
-  ctx.fillStyle = on
-  circle(ctx, headX, lightY, s * 0.16)
-  ctx.fill()
 }
 
 // ─── Mouse ───────────────────────────────────────────────────────────────────
@@ -926,8 +913,8 @@ const drawProximityUi = (ctx: CanvasRenderingContext2D, mx: number, dt: number):
 // ─── Door HUD: the deposit drain + the Safe Exit hold ─────────────────────────
 const drawDoorUi = (ctx: CanvasRenderingContext2D, now: number): void => {
   if (phase.value !== 'playing') return
-  // §G Safe Exit: the dessert is stripped and gold is still on the table — hold
-  // away from it to bank the level and go home.
+  // §G Safe Exit: the haul on the books already clears the level — hold away from
+  // the dessert to bank it and go home, or turn around and go be greedy.
   if (game.canExit) {
     const y = floorY - unit * 2.6
     drawHarvestRing(ctx, homeX, y, Math.max(0.001, game.exitT), 1)

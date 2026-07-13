@@ -257,11 +257,6 @@ watch(cookie.atDessert, (at) => {
   }
 })
 
-// "Freeze!" while the Cat is watching; "RUN!" the moment the laser starts
-// charging — because once it's charging, holding still is a guaranteed hit.
-const freezeWarn = computed(() => phase.value === 'playing' && mustFreeze.value && !mustRun.value)
-const runWarn = computed(() => phase.value === 'playing' && mustRun.value)
-
 const timeDisplay = computed(() => {
   const s = Math.max(0, Math.ceil(timeLeft.value))
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
@@ -590,18 +585,6 @@ onUnmounted(() => {
           :style="{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }"
         )
           div.text-white.italic.game-text.opacity-80(class="text-xs sm:text-sm px-3 py-1 rounded-full bg-black/40") {{ hintText }}
-
-      //- FREEZE! (the Cat is watching) — then RUN! the instant the laser charges,
-      //- because standing still through a charge is a guaranteed direct hit.
-      Transition(name="fade")
-        div.absolute.left-0.right-0.flex.justify-center.z-10(
-          v-if="freezeWarn || runWarn"
-          :style="{ top: 'calc(13rem + env(safe-area-inset-top, 0px))' }"
-        )
-          div.font-black.uppercase.tracking-widest.game-text.animate-pulse.border-2.text-white(
-            class="text-2xl sm:text-4xl px-4 py-1 rounded-xl"
-            :class="runWarn ? 'bg-orange-600/80 border-yellow-200' : 'bg-red-700/70 border-red-300'"
-          ) {{ runWarn ? t('hints.run') : t('hints.freeze') }}
 
       //- Bottom-left: lives during a run; otherwise the meta cluster.
       div.absolute.pointer-events-auto.z-50.flex.flex-col.items-start.gap-1(

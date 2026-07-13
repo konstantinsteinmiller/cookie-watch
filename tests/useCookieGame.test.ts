@@ -335,6 +335,54 @@ const playSmartRunUntilGoldReady = (): void => {
   )
 }
 
+describe('the Safe Exit (§G)', () => {
+  it('leaves the level in the player\'s hands once the last chunks are banked', () => {
+    startLevel(2)
+    playSmartRunUntilGoldReady()
+    expect(G.game.canExit).toBe(true)          // the door is open…
+    expect(G.phase.value).toBe('playing')      // …but it does NOT close by itself
+
+    // Sneak a little way back out, change your mind, and walk home on a single
+    // unbroken hold — the hold that CARRIES him home must never cash the level in.
+    until(() => G.game.pos > 0.12,
+      () => (G.catStateRef.value === 'asleep' ? 'right' : null), 20_000)
+    G.releaseAllDirs()
+    G.pressDir('left')
+    for (let t = 0; t < 6000; t += TICK) G.step(TICK)
+
+    expect(G.game.atDoor).toBe(true)
+    expect(G.game.exitT).toBe(0)               // the hold predates the open door
+    expect(G.phase.value).toBe('playing')      // the Nugget is still his to take
+    expect(G.game.goldExposed).toBe(true)
+  })
+
+  it('ends the level on a fresh back-press held in the doorway', () => {
+    startLevel(2)
+    playSmartRunUntilGoldReady()
+
+    G.pressDir('left')                         // a deliberate "I'm done" — 0.8s
+    for (let t = 0; t < 1200; t += TICK) G.step(TICK)
+    expect(G.phase.value).toBe('review')
+    expect(G.reviewData.value.stars).toBe(3)   // all six chunks banked, no Nugget
+    expect(G.reviewData.value.platinum).toBe(false)
+  })
+
+  it('opens the door as soon as the haul already clears the Pass target', () => {
+    startLevel(2)                              // pass 2 · perfect 6 · 6 chunks
+    const asleep = (): boolean => G.catStateRef.value === 'asleep'
+    until(() => G.game.slots >= G.MAX_SLOTS, () => (asleep() ? 'right' : null), 60_000, true)
+    until(() => G.depositedValue.value >= 3, () => (asleep() ? 'left' : null), 60_000, true)
+
+    expect(G.game.chunksInDessert).toBe(3)     // half the cookie is still out there
+    expect(G.game.canExit).toBe(true)          // …and the player may leave anyway
+
+    G.pressDir('left')
+    for (let t = 0; t < 1200; t += TICK) G.step(TICK)
+    expect(G.phase.value).toBe('review')
+    expect(G.reviewData.value.stars).toBe(1)   // a Pass — greed left on the table
+  })
+})
+
 describe('panic drops and burnt chunks (§F)', () => {
   it('drops the last carried item onto the floor and re-loots it', () => {
     startLevel(1)

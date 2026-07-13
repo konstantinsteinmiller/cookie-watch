@@ -152,9 +152,9 @@ const MISS_OFFSET = 0.1
 /** Blast radius: what the beam vaporizes / chars / is blocked by. */
 const BLAST_R = 0.045
 /** Holding "away from the dessert" at the door this long ends the level early —
- *  the §G Safe Exit, offered once the dessert is stripped but gold still hangs
- *  around. (With nothing left out there the door just closes on its own.) */
-const EXIT_HOLD_MS = 600
+ *  the §G Safe Exit, offered the moment the haul on the books already clears the
+ *  level. (With nothing left out there the door just closes on its own.) */
+const EXIT_HOLD_MS = 800
 
 // ─── Gold Nugget (Rev 5 §F/§G) ───────────────────────────────────────────────
 /** Loose gold vanishes after this long (flashing over the last 4s). */
@@ -345,6 +345,10 @@ let chokeEndsAt = 0
 const heldDirs = new Set<Dir>()
 let lastTapAt: Partial<Record<Dir, number>> = {}
 let dashDir: Dir | null = null
+/** True only for a back-press that was made AFTER the door opened for a Safe
+ *  Exit — see `pressDir`. The hold that carries the Mouse home can therefore
+ *  never cash the level in by itself. */
+let exitArmed = false
 
 // Deposit tiering: chunks banked in the CURRENT trip drive the 100/300/600
 // delivery tiers, and `depositWasFull` locks in the greedy multiplier from the
@@ -647,17 +651,23 @@ export const pressDir = (dir: Dir): void => {
   if (elapsedMs - prev <= DOUBLE_TAP_MS) dashDir = dir
   lastTapAt[dir] = elapsedMs
   heldDirs.add(dir)
+  // The Safe Exit answers to a back-press made while the door is ALREADY open —
+  // never to the one that walked the Mouse home. Banking your last chunks must
+  // leave you standing in the doorway with the choice still in your hands.
+  if (BACK_DIRS.includes(dir) && game.canExit) exitArmed = true
 }
 
 export const releaseDir = (dir: Dir): void => {
   heldDirs.delete(dir)
   if (dashDir === dir) dashDir = null
+  if (BACK_DIRS.includes(dir)) exitArmed = false
 }
 
 /** Release every held direction (blur / pause / phase change). */
 export const releaseAllDirs = (): void => {
   heldDirs.clear()
   dashDir = null
+  exitArmed = false
 }
 
 /** The Eating Frenzy mash + the tap-to-start both route through here. */
@@ -886,6 +896,7 @@ export const resetForStage = (): void => {
 
   releaseAllDirs()
   lastTapAt = {}
+  exitArmed = false
 
   elapsedMs = 0
   nextItemId = 1
@@ -1174,17 +1185,21 @@ export const step = (dt: number): void => {
 
   const settled = game.items.length === 0 && depositUntil === 0 && leftDoor && atDoor
   const stripped = game.chunksInDessert === 0
-  // Everything is either banked, burnt or gone — the door simply closes behind him.
+  // Nothing is left out there to carry home — no decision to make, so the door
+  // simply closes behind him.
   if (settled && stripped && !game.goldExposed && !goldOnFloor()) {
     finishLevel()
     return
   }
 
-  // §G Safe Exit: the dessert is stripped but the Gold Nugget is still out there.
-  // Leaving is now a decision — hold away from the dessert at the door to take
-  // the win, or turn around and go be greedy.
-  game.canExit = settled && stripped
-  if (game.canExit && dir < 0) {
+  // §G Safe Exit. The door opens as soon as the Mouse is standing in it with an
+  // empty sack and a haul that already clears the level (or with a dessert that
+  // has nothing left to give). So banking the last chunks never ends the run FOR
+  // you: you're left in the doorway choosing between turning around for the Gold
+  // Nugget and going home. Leaving takes a fresh, deliberate back-press (see
+  // `pressDir`) held for EXIT_HOLD_MS.
+  game.canExit = settled && (stripped || game.depositedValue >= cfg.pass)
+  if (game.canExit && exitArmed && dir < 0) {
     game.exitT = clamp(game.exitT + dt / EXIT_HOLD_MS, 0, 1)
     if (game.exitT >= 1) {
       finishLevel()
