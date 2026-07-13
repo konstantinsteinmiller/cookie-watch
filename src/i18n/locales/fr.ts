@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': 'Maintiens un côté pour te faufiler — double-tape pour foncer, relâche pour faire le mort',
+    'keysToMove': 'Maintiens ◀ ▶ pour te faufiler — double-appui pour foncer, relâche pour faire le mort',
+    'freeze': 'Fige-toi ! Ne bouge pas !',
+    'run': 'Cours ! Ne t’arrête pas !'
+  },
   'tutorial': {
-    'breakCookieTouch': 'Touchez pour casser le cookie',
-    'breakCookieDesktop': 'Cliquez pour casser le cookie',
-    'playDeadTouch': 'Glissez vers le bas pour faire le mort',
-    'playDeadDesktop': 'Appuyez sur ↓ pour faire le mort',
+    'harvestTouch': 'Maintiens à droite près du cookie pour récolter',
+    'harvestDesktop': 'Maintiens ▶ près du cookie pour récolter',
+    'playDeadTouch': 'Relâche pour faire le mort',
+    'playDeadDesktop': 'Relâche pour faire le mort',
     'avoidCat': 'Ne te fais pas attraper par le chat'
+  },
+  'cat': {
+    'asleep': 'Endormi',
+    'awake': 'Réveillé'
+  },
+  'frenzy': {
+    'title': 'Frénésie gloutonne !',
+    'sub': 'Dévore tout le dessert avant la fin du temps !',
+    'tap': 'Tape ! Tape ! Tape !',
+    'click': 'Clique ! Clique ! Clique !',
+    'chokeHint': 'Gère ton rythme — trop vite et tu t’étouffes !',
+    'choking': 'Étouffement !'
+  },
+  'review': {
+    'title': 'Bilan du niveau',
+    'delivery': 'Livraison',
+    'greedy': 'Bonus de cupidité',
+    'closeCall': 'Passé de justesse',
+    'insaneEscape': 'Évasion de folie',
+    'daringTotal': 'Total d’audace',
+    'pass': 'Étape réussie',
+    'perfectClear': 'Sans faute !',
+    'goldClear': 'Finish en or !',
+    'toFrenzy': 'Mange le cookie !'
   },
   'ads': {
     'watch': 'Regarder', 'revive': 'Revivre', 'secondChance': 'Seconde chance', 'doubleCoins': '2× pièces', 'plusCoins': '+{n} pièces'
@@ -42,11 +72,7 @@ export default {
   'crazyGamesOnly': 'Ce jeu est uniquement disponible sur',
   'startTouch': 'Touchez pour commencer',
   'startDesktop': 'Cliquez pour commencer',
-  'startSubhint': 'Monte en roulant — change de direction pour éviter les trous et les obstacles !',
-  'hints': {
-    'tapToTurn': 'Touchez pour changer de direction',
-    'clickToTurn': 'Clic / Espace pour changer de direction'
-  },
+  'startSubhint': 'Maintiens un côté pour te faufiler, relâche pour faire le mort. Maintiens vers le cookie pour récolter des morceaux, ramène-les chez toi — et FIGE-TOI quand le chat se réveille !',
   'powerups': {
     'invuln': 'Invincible',
     'magnet': 'Aimant à pièces',
@@ -69,7 +95,10 @@ export default {
     'winReward': 'dont +{n} bonus de niveau',
     'double': 'Doubler les pièces',
     'firstRunDouble': '2× — première partie du jour !',
-   'almost': 'Presque ! Encore {n} cases.', 'retry': 'Réessayer', },
+    'almost': 'Presque ! Encore {n} cases.', 'retry': 'Réessayer',
+    'caught': 'Le laser du chat t’a vaporisé !',
+    'timeout': 'Temps écoulé — tu n’as pas assez volé !'
+  },
   'upgrades': {
     'title': 'Améliorations',
     'subtitle': 'Dépensez des pièces pour vous renforcer définitivement.',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': "Esquive auto une case mortelle, puis recharge (10s ; −0,5s par niveau).",
       'deathMagnet': "À la mort, récupère toutes les pièces dans un rayon de 4 cases — encaisse ce que tu aurais perdu.",
       'autoCollect': "Collecte toujours les pièces des cases adjacentes — un aimant à pièces permanent d'une case.",
-      'rollingBoulder': 'Traversez les caisses sans dommage.'
+      'rollingBoulder': 'Traversez les caisses sans dommage.',
+      'calmNerves': 'Un délai de grâce plus long pour te figer après le réveil du chat (+0,05 s par niveau).',
+      'lightPaws': 'Le chat dort plus longtemps — feu vert prolongé (+4 % par niveau).',
+      'extraTime': 'Commence chaque cuisine avec plus de temps (+5 s par niveau).',
+      'deepHole': 'Ton butin descend plus vite dans le trou de souris (+12 % par niveau).',
+      'sixthSense': 'Le laser met plus de temps à charger, tu as donc plus de temps pour esquiver (+0,15 s par niveau).'
     },
     'secondChance': {
       'name': 'Seconde Chance',

@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': '片側を押し続けて忍び歩き — 二度押しでダッシュ、離すと死んだふり',
+    'keysToMove': '◀ ▶ を押し続けて忍び歩き — 二度押しでダッシュ、離すと死んだふり',
+    'freeze': '動くな！じっとして！',
+    'run': '走れ！止まるな！'
+  },
   'tutorial': {
-    'breakCookieTouch': 'タップしてクッキーを割る',
-    'breakCookieDesktop': 'クリックしてクッキーを割る',
-    'playDeadTouch': '下にスワイプして死んだふり',
-    'playDeadDesktop': '↓ を押して死んだふり',
-    'avoidCat': '猫に捕まらないで'
+    'harvestTouch': 'クッキーのそばで右を押し続けて採取',
+    'harvestDesktop': 'クッキーのそばで ▶ を押し続けて採取',
+    'playDeadTouch': '離すと死んだふり',
+    'playDeadDesktop': '離すと死んだふり',
+    'avoidCat': 'ネコに捕まるな'
+  },
+  'cat': {
+    'asleep': '睡眠中',
+    'awake': '起きた'
+  },
+  'frenzy': {
+    'title': '爆食タイム！',
+    'sub': '時間切れまでにデザートを食べ尽くせ！',
+    'tap': '連打！連打！連打！',
+    'click': 'クリック！クリック！クリック！',
+    'chokeHint': 'ペース配分を——速すぎると喉に詰まるぞ！',
+    'choking': 'のどに詰まった！'
+  },
+  'review': {
+    'title': 'レベル集計',
+    'delivery': '搬入',
+    'greedy': '強欲ボーナス',
+    'closeCall': '間一髪',
+    'insaneEscape': '奇跡の脱出',
+    'daringTotal': '大胆スコア',
+    'pass': 'ステージクリア',
+    'perfectClear': 'パーフェクト！',
+    'goldClear': 'ゴールドクリア！',
+    'toFrenzy': 'クッキーを食べる！'
   },
   'ads': {
     'watch': '見る', 'revive': '復活', 'secondChance': 'セカンドチャンス', 'doubleCoins': '2× コイン', 'plusCoins': '+{n} コイン'
@@ -42,11 +72,7 @@ export default {
   'crazyGamesOnly': 'このゲームは次でのみプレイできます',
   'startTouch': 'タップしてスタート',
   'startDesktop': 'クリックしてスタート',
-  'startSubhint': '上へ転がろう — 方向を変えて穴や障害物を避けよう！',
-  'hints': {
-    'tapToTurn': 'タップで方向転換',
-    'clickToTurn': 'クリック / スペースで方向転換'
-  },
+  'startSubhint': '片側を押し続けて忍び歩き、離すと死んだふり。クッキーの方向に押し続けて欠片を採取し、家まで運ぼう——ネコが起きたら動くな！',
   'powerups': {
     'invuln': '無敵',
     'magnet': 'コインマグネット',
@@ -69,7 +95,10 @@ export default {
     'winReward': '（+{n} ステージボーナス込み）',
     'double': 'コイン2倍',
     'firstRunDouble': '2倍 — 本日初プレイ！',
-   'almost': 'あと少し！残り {n} マス。', 'retry': 'リトライ', },
+    'almost': 'あと少し！残り {n} マス。', 'retry': 'リトライ',
+    'caught': 'ネコのレーザーに蒸発させられた！',
+    'timeout': '時間切れ——盗みが足りない！'
+  },
   'upgrades': {
     'title': 'アップグレード',
     'subtitle': 'コインを使って永続的に強化しよう。',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': '危険なマスを1回自動回避、その後リチャージ（10秒、レベルごとに−0.5秒）。',
       'deathMagnet': '死亡時、4マス以内のすべてのコインを引き寄せる — 失うはずだったコインを回収する。',
       'autoCollect': '近くのマスからコインを常に集める — 永続的な1マスのコインマグネット。',
-      'rollingBoulder': '箱の障害物を無傷で突き抜ける。'
+      'rollingBoulder': '箱の障害物を無傷で突き抜ける。',
+      'calmNerves': 'ネコが起きてから動きを止める猶予が延びる（レベルごとに +0.05 秒）。',
+      'lightPaws': 'ネコがより長く眠る——青信号が延びる（レベルごとに +4%）。',
+      'extraTime': '各キッチンをより長い持ち時間で開始（レベルごとに +5 秒）。',
+      'deepHole': '戦利品がネズミ穴により速く落ちる（レベルごとに +12%）。',
+      'sixthSense': 'レーザーのチャージが長くなり、回避の時間が増える（レベルごとに +0.15 秒）。'
     },
     'secondChance': {
       'name': 'セカンドチャンス',

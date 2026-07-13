@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': 'Tahan satu sisi untuk menyelinap — ketuk dua kali untuk melesat, lepas untuk pura-pura mati',
+    'keysToMove': 'Tahan ◀ ▶ untuk menyelinap — tekan dua kali untuk melesat, lepas untuk pura-pura mati',
+    'freeze': 'Diam! Jangan bergerak!',
+    'run': 'Lari! Jangan berhenti!'
+  },
   'tutorial': {
-    'breakCookieTouch': 'Ketuk untuk memecahkan kue',
-    'breakCookieDesktop': 'Klik untuk memecahkan kue',
-    'playDeadTouch': 'Geser ke bawah untuk pura-pura mati',
-    'playDeadDesktop': 'Tekan ↓ untuk pura-pura mati',
-    'avoidCat': 'Jangan sampai kucing menangkapmu'
+    'harvestTouch': 'Tahan ke kanan di dekat kue untuk memanen',
+    'harvestDesktop': 'Tahan ▶ di dekat kue untuk memanen',
+    'playDeadTouch': 'Lepas untuk pura-pura mati',
+    'playDeadDesktop': 'Lepas untuk pura-pura mati',
+    'avoidCat': 'Jangan sampai tertangkap kucing'
+  },
+  'cat': {
+    'asleep': 'Tidur',
+    'awake': 'Bangun'
+  },
+  'frenzy': {
+    'title': 'Pesta Makan!',
+    'sub': 'Habiskan seluruh hidangan sebelum waktu habis!',
+    'tap': 'Ketuk! Ketuk! Ketuk!',
+    'click': 'Klik! Klik! Klik!',
+    'chokeHint': 'Atur ritmemu — terlalu cepat kau akan tersedak!',
+    'choking': 'Tersedak!'
+  },
+  'review': {
+    'title': 'Ulasan Level',
+    'delivery': 'Pengiriman',
+    'greedy': 'Bonus Serakah',
+    'closeCall': 'Nyaris Saja',
+    'insaneEscape': 'Pelarian Gila',
+    'daringTotal': 'Total Keberanian',
+    'pass': 'Etape Selesai',
+    'perfectClear': 'Sempurna!',
+    'goldClear': 'Tuntas Emas!',
+    'toFrenzy': 'Makan Kuenya!'
   },
   'ads': {
     'watch': 'Tonton', 'revive': 'Hidupkan', 'secondChance': 'Kesempatan Kedua', 'doubleCoins': '2× koin', 'plusCoins': '+{n} koin'
@@ -42,11 +72,30 @@ export default {
   'crazyGamesOnly': 'Game ini hanya tersedia di',
   'startTouch': 'Ketuk untuk Mulai',
   'startDesktop': 'Klik untuk Mulai',
-  'startSubhint': 'Bergulir ke atas — ubah arah untuk menghindari celah dan rintangan!',
-  'hints': { 'tapToTurn': 'Ketuk untuk mengubah arah', 'clickToTurn': 'Klik / Spasi untuk mengubah arah' },
-  'powerups': { 'invuln': 'Kebal', 'magnet': 'Magnet Koin', 'dodge': 'Ahli Menghindar', 'slowmo': 'Gerak Lambat', 'push': 'Daya Dorong',  'racer': 'Racer!' },
+  'startSubhint': 'Tahan satu sisi untuk menyelinap, lepas untuk pura-pura mati. Tahan ke arah kue untuk memanen kepingan, bawa pulang — dan DIAM saat kucing bangun!',
+  'powerups': {
+    'invuln': 'Kebal',
+    'magnet': 'Magnet Koin',
+    'dodge': 'Ahli Menghindar',
+    'slowmo': 'Gerak Lambat',
+    'push': 'Daya Dorong',
+    'racer': 'Racer!'
+  },
   'secondChance': { 'title': 'Tetap bergulir?', 'body': 'Tonton iklan singkat untuk hidup kembali dan melanjutkan permainanmu.', 'watch': 'Tonton & Lanjutkan', 'skip': 'Lewati' },
-  'result': { 'win': 'TAHAP SELESAI!', 'lose': 'PERMAINAN BERAKHIR', 'fell': 'Kamu jatuh ke dalam celah!', 'crashed': 'Kamu menabrak rintangan!', 'tiles': 'Ubin', 'winReward': 'termasuk +{n} bonus tahap', 'double': 'Koin ganda', 'firstRunDouble': '2× — main pertama hari ini!',  'almost': 'Hampir! {n} ubin lagi.', 'retry': 'Coba lagi', },
+  'result': {
+    'win': 'TAHAP SELESAI!',
+    'lose': 'PERMAINAN BERAKHIR',
+    'fell': 'Kamu jatuh ke dalam celah!',
+    'crashed': 'Kamu menabrak rintangan!',
+    'tiles': 'Ubin',
+    'winReward': 'termasuk +{n} bonus tahap',
+    'double': 'Koin ganda',
+    'firstRunDouble': '2× — main pertama hari ini!',
+    'almost': 'Hampir! {n} ubin lagi.',
+    'retry': 'Coba lagi',
+    'caught': 'Laser kucing menguapkanmu!',
+    'timeout': 'Waktu habis — curianmu belum cukup!'
+  },
   'upgrades': {
     'title': 'Peningkatan',
     'subtitle': 'Gunakan koin untuk meningkatkan kekuatan secara permanen.',
@@ -56,7 +105,21 @@ export default {
     'spotlight': 'Belanja!',
     'unlocksAtStage': '🔒 Tahap {n}',
     'names': { 'powerupDuration': 'Dorongan Daya', 'magnetRange': 'Jangkauan Magnet', 'coinValue': 'Nilai Koin', 'itemLuck': 'Kotak Keberuntungan', 'dodgeApprentice': 'Murid Menghindar', 'deathMagnet': 'Magnet Maut', 'autoCollect': 'Pengumpulan Otomatis', 'rollingBoulder': 'Batu Bergulir' },
-    'descriptions': { 'powerupDuration': 'Semua power-up bertahan lebih lama (+0,75 dtk per level).', 'magnetRange': 'Magnet Koin menjangkau lebih jauh.', 'coinValue': 'Setiap koin yang kamu ambil bernilai lebih tinggi.', 'itemLuck': 'Kotak item muncul lebih sering.', 'dodgeApprentice': 'Hindari otomatis satu ubin mematikan, lalu isi ulang (10 dtk; −0,5 dtk per level).', 'deathMagnet': 'Saat mati, ambil setiap koin dalam jarak 4 ubin — simpan koin yang seharusnya hilang.', 'autoCollect': 'Selalu kumpulkan koin dari ubin di sekitar — magnet permanen 1 ubin.', 'rollingBoulder': 'Bergulir lurus menembus rintangan kotak tanpa cedera.' },
+    'descriptions': {
+      'powerupDuration': 'Semua power-up bertahan lebih lama (+0,75 dtk per level).',
+      'magnetRange': 'Magnet Koin menjangkau lebih jauh.',
+      'coinValue': 'Setiap koin yang kamu ambil bernilai lebih tinggi.',
+      'itemLuck': 'Kotak item muncul lebih sering.',
+      'dodgeApprentice': 'Hindari otomatis satu ubin mematikan, lalu isi ulang (10 dtk; −0,5 dtk per level).',
+      'deathMagnet': 'Saat mati, ambil setiap koin dalam jarak 4 ubin — simpan koin yang seharusnya hilang.',
+      'autoCollect': 'Selalu kumpulkan koin dari ubin di sekitar — magnet permanen 1 ubin.',
+      'rollingBoulder': 'Bergulir lurus menembus rintangan kotak tanpa cedera.',
+      'calmNerves': 'Tenggang waktu lebih lama untuk diam setelah kucing bangun (+0,05 dtk per level).',
+      'lightPaws': 'Kucing tidur lebih lama — lampu hijau lebih panjang (+4% per level).',
+      'extraTime': 'Mulai setiap dapur dengan waktu lebih banyak (+5 dtk per level).',
+      'deepHole': 'Hasil jarahanmu masuk lubang tikus lebih cepat (+12% per level).',
+      'sixthSense': 'Laser butuh waktu lebih lama untuk terisi, jadi kau punya waktu mengelak lebih lama (+0,15 dtk per level).'
+    },
     'secondChance': { 'name': 'Kesempatan Kedua', 'description': 'Mulai setiap permainan dengan sayap malaikat — selamat dari satu tabrakan atau jatuh. Aktif sampai digunakan.', 'active': 'AKTIF', 'watch': 'Gratis' }
   },
   'battlePass': { 'title': 'Battle Pass', 'progress': '{current} / {total}', 'daysLeft': 'sisa {n}h', 'maxed': 'BATTLE PASS SELESAI', 'xpProgress': '{current} / {total} XP', 'howToEarn': 'Cara mendapatkan XP', 'perAttempt': 'per permainan', 'perStageFinish': 'per tahap selesai', 'unlockHint': 'Capai {n} XP untuk membuka hadiah berikutnya — hadiah yang belum diklaim tetap ada sampai kamu mengetuknya.' },

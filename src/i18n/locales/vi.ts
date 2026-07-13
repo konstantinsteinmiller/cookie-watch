@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': 'Giữ một bên để rón rén — chạm hai lần để lao đi, thả ra để giả chết',
+    'keysToMove': 'Giữ ◀ ▶ để rón rén — nhấn hai lần để lao đi, thả ra để giả chết',
+    'freeze': 'Đứng yên! Đừng nhúc nhích!',
+    'run': 'Chạy đi! Đừng dừng lại!'
+  },
   'tutorial': {
-    'breakCookieTouch': 'Chạm để đập vỡ bánh quy',
-    'breakCookieDesktop': 'Nhấp để đập vỡ bánh quy',
-    'playDeadTouch': 'Vuốt xuống để giả chết',
-    'playDeadDesktop': 'Nhấn ↓ để giả chết',
-    'avoidCat': 'Đừng để mèo bắt được bạn'
+    'harvestTouch': 'Giữ sang phải cạnh bánh quy để thu hoạch',
+    'harvestDesktop': 'Giữ ▶ cạnh bánh quy để thu hoạch',
+    'playDeadTouch': 'Thả ra để giả chết',
+    'playDeadDesktop': 'Thả ra để giả chết',
+    'avoidCat': 'Đừng để mèo bắt được'
+  },
+  'cat': {
+    'asleep': 'Đang ngủ',
+    'awake': 'Đã thức'
+  },
+  'frenzy': {
+    'title': 'Cơn cuồng ăn!',
+    'sub': 'Ngốn sạch món tráng miệng trước khi hết giờ!',
+    'tap': 'Chạm! Chạm! Chạm!',
+    'click': 'Nhấp! Nhấp! Nhấp!',
+    'chokeHint': 'Giữ nhịp — bấm quá nhanh là nghẹn đấy!',
+    'choking': 'Nghẹn rồi!'
+  },
+  'review': {
+    'title': 'Tổng kết màn',
+    'delivery': 'Giao hàng',
+    'greedy': 'Thưởng Tham lam',
+    'closeCall': 'Thoát trong gang tấc',
+    'insaneEscape': 'Đào thoát điên rồ',
+    'daringTotal': 'Tổng điểm liều lĩnh',
+    'pass': 'Qua màn',
+    'perfectClear': 'Hoàn hảo!',
+    'goldClear': 'Hoàn thành Vàng!',
+    'toFrenzy': 'Ăn bánh quy!'
   },
   'ads': {
     'watch': 'Xem', 'revive': 'Hồi sinh', 'secondChance': 'Cơ hội thứ hai', 'doubleCoins': '2× xu', 'plusCoins': '+{n} xu'
@@ -42,11 +72,7 @@ export default {
   'crazyGamesOnly': 'Trò chơi này chỉ có trên',
   'startTouch': 'Chạm để bắt đầu',
   'startDesktop': 'Nhấp để bắt đầu',
-  'startSubhint': 'Lăn lên trên — đổi hướng để né các khoảng trống và chướng ngại vật!',
-  'hints': {
-    'tapToTurn': 'Chạm để đổi hướng',
-    'clickToTurn': 'Nhấp / Phím cách để đổi hướng'
-  },
+  'startSubhint': 'Giữ một bên để rón rén, thả ra để giả chết. Giữ hướng về phía bánh quy để thu hoạch mảnh vụn, mang chúng về nhà — và ĐỨNG YÊN khi mèo thức dậy!',
   'powerups': {
     'invuln': 'Bất tử',
     'magnet': 'Nam châm hút xu',
@@ -69,7 +95,10 @@ export default {
     'winReward': 'gồm +{n} thưởng màn',
     'double': 'Nhân đôi xu',
     'firstRunDouble': '2× — lượt chơi đầu tiên hôm nay!',
-   'almost': 'Sắp rồi! Còn {n} ô nữa.', 'retry': 'Thử lại', },
+    'almost': 'Sắp rồi! Còn {n} ô nữa.', 'retry': 'Thử lại',
+    'caught': 'Tia laser của mèo đã bốc hơi bạn!',
+    'timeout': 'Hết giờ — bạn chưa trộm đủ!'
+  },
   'upgrades': {
     'title': 'Nâng cấp',
     'subtitle': 'Dùng xu để tăng sức mạnh vĩnh viễn.',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': 'Tự động né một ô chết người, sau đó nạp lại (10s; −0.5s mỗi cấp).',
       'deathMagnet': 'Khi chết, hút mọi đồng xu trong phạm vi 4 ô — giữ lại số xu lẽ ra đã mất.',
       'autoCollect': 'Luôn thu thập xu từ các ô lân cận — nam châm 1 ô vĩnh viễn.',
-      'rollingBoulder': 'Lăn xuyên qua các chướng ngại vật hộp mà không hề hấn gì.'
+      'rollingBoulder': 'Lăn xuyên qua các chướng ngại vật hộp mà không hề hấn gì.',
+      'calmNerves': 'Có thêm thời gian ân hạn để đứng yên sau khi mèo thức (+0,05 giây mỗi cấp).',
+      'lightPaws': 'Mèo ngủ lâu hơn — đèn xanh dài hơn (+4% mỗi cấp).',
+      'extraTime': 'Bắt đầu mỗi gian bếp với nhiều thời gian hơn (+5 giây mỗi cấp).',
+      'deepHole': 'Chiến lợi phẩm rơi xuống hang chuột nhanh hơn (+12% mỗi cấp).',
+      'sixthSense': 'Laser sạc lâu hơn nên bạn có nhiều thời gian né hơn (+0,15 giây mỗi cấp).'
     },
     'secondChance': {
       'name': 'Cơ hội thứ hai',

@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': 'Segure um lado para se esgueirar — toque duplo para disparar, solte para se fingir de morto',
+    'keysToMove': 'Segure ◀ ▶ para se esgueirar — pressione duas vezes para disparar, solte para se fingir de morto',
+    'freeze': 'Congele! Não se mexa!',
+    'run': 'Corra! Não pare!'
+  },
   'tutorial': {
-    'breakCookieTouch': 'Toque para quebrar o biscoito',
-    'breakCookieDesktop': 'Clique para quebrar o biscoito',
-    'playDeadTouch': 'Deslize para baixo para se fingir de morto',
-    'playDeadDesktop': 'Pressione ↓ para se fingir de morto',
+    'harvestTouch': 'Segure para a direita junto ao biscoito para colher',
+    'harvestDesktop': 'Segure ▶ junto ao biscoito para colher',
+    'playDeadTouch': 'Solte para se fingir de morto',
+    'playDeadDesktop': 'Solte para se fingir de morto',
     'avoidCat': 'Não deixe o gato te pegar'
+  },
+  'cat': {
+    'asleep': 'Dormindo',
+    'awake': 'Acordado'
+  },
+  'frenzy': {
+    'title': 'Frenesi devorador!',
+    'sub': 'Devore a sobremesa inteira antes que o tempo acabe!',
+    'tap': 'Toque! Toque! Toque!',
+    'click': 'Clique! Clique! Clique!',
+    'chokeHint': 'Controle o ritmo — rápido demais e você engasga!',
+    'choking': 'Engasgou!'
+  },
+  'review': {
+    'title': 'Balanço da fase',
+    'delivery': 'Entrega',
+    'greedy': 'Bônus de ganância',
+    'closeCall': 'Por pouco',
+    'insaneEscape': 'Fuga insana',
+    'daringTotal': 'Total de ousadia',
+    'pass': 'Etapa concluída',
+    'perfectClear': 'Perfeito!',
+    'goldClear': 'Conclusão de ouro!',
+    'toFrenzy': 'Coma o biscoito!'
   },
   'ads': {
     'watch': 'Assistir', 'revive': 'Reviver', 'secondChance': 'Segunda chance', 'doubleCoins': '2× moedas', 'plusCoins': '+{n} moedas'
@@ -42,11 +72,7 @@ export default {
   'crazyGamesOnly': 'Este jogo só está disponível em',
   'startTouch': 'Toque para começar',
   'startDesktop': 'Clique para começar',
-  'startSubhint': 'Role para cima — mude de direção para desviar das lacunas e obstáculos!',
-  'hints': {
-    'tapToTurn': 'Toque para mudar de direção',
-    'clickToTurn': 'Clique / Espaço para mudar de direção'
-  },
+  'startSubhint': 'Segure um lado para se esgueirar, solte para se fingir de morto. Segure em direção ao biscoito para colher pedaços, leve-os para casa — e CONGELE quando o gato acordar!',
   'powerups': {
     'invuln': 'Invencível',
     'magnet': 'Ímã de Moedas',
@@ -69,7 +95,10 @@ export default {
     'winReward': 'incl. +{n} bônus de fase',
     'double': 'Dobrar moedas',
     'firstRunDouble': '2× — primeira corrida de hoje!',
-   'almost': 'Quase! Faltam {n} casas.', 'retry': 'Repetir', },
+    'almost': 'Quase! Faltam {n} casas.', 'retry': 'Repetir',
+    'caught': 'O laser do gato te vaporizou!',
+    'timeout': 'Tempo esgotado — você não roubou o suficiente!'
+  },
   'upgrades': {
     'title': 'Melhorias',
     'subtitle': 'Gaste moedas para se fortalecer permanentemente.',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': 'Esquiva auto de uma casa mortal, depois recarrega (10s; −0,5s por nível).',
       'deathMagnet': 'Ao morrer, recolha todas as moedas num raio de 4 casas — garanta o que teria perdido.',
       'autoCollect': 'Coleta sempre as moedas das casas próximas — um ímã de moedas permanente de 1 casa.',
-      'rollingBoulder': 'Role direto pelas caixas, sem sofrer dano.'
+      'rollingBoulder': 'Role direto pelas caixas, sem sofrer dano.',
+      'calmNerves': 'Mais margem para congelar depois que o gato acorda (+0,05 s por nível).',
+      'lightPaws': 'O gato dorme mais — sinal verde mais longo (+4% por nível).',
+      'extraTime': 'Comece cada cozinha com mais tempo (+5 s por nível).',
+      'deepHole': 'Seu butim desce mais rápido pela toca (+12% por nível).',
+      'sixthSense': 'O laser demora mais para carregar, então você tem mais tempo para desviar (+0,15 s por nível).'
     },
     'secondChance': {
       'name': 'Segunda Chance',

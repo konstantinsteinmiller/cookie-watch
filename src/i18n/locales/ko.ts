@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': '한쪽을 눌러 몰래 이동 — 두 번 탭하면 대시, 손을 떼면 죽은 척',
+    'keysToMove': '◀ ▶ 를 눌러 몰래 이동 — 두 번 누르면 대시, 손을 떼면 죽은 척',
+    'freeze': '멈춰! 움직이지 마!',
+    'run': '달려! 멈추지 마!'
+  },
   'tutorial': {
-    'breakCookieTouch': '탭하여 쿠키 부수기',
-    'breakCookieDesktop': '클릭하여 쿠키 부수기',
-    'playDeadTouch': '아래로 밀어 죽은 척하기',
-    'playDeadDesktop': '↓ 눌러 죽은 척하기',
+    'harvestTouch': '쿠키 옆에서 오른쪽을 누르고 있으면 채집',
+    'harvestDesktop': '쿠키 옆에서 ▶ 를 누르고 있으면 채집',
+    'playDeadTouch': '손을 떼면 죽은 척',
+    'playDeadDesktop': '손을 떼면 죽은 척',
     'avoidCat': '고양이에게 잡히지 마세요'
+  },
+  'cat': {
+    'asleep': '자는 중',
+    'awake': '깨어남'
+  },
+  'frenzy': {
+    'title': '폭식 타임!',
+    'sub': '시간이 다 가기 전에 디저트를 전부 먹어치우세요!',
+    'tap': '탭! 탭! 탭!',
+    'click': '클릭! 클릭! 클릭!',
+    'chokeHint': '속도를 조절하세요 — 너무 빨리 먹으면 목이 막힙니다!',
+    'choking': '목이 막혔다!'
+  },
+  'review': {
+    'title': '레벨 결산',
+    'delivery': '납품',
+    'greedy': '탐욕 보너스',
+    'closeCall': '아슬아슬',
+    'insaneEscape': '미친 탈출',
+    'daringTotal': '대담함 총점',
+    'pass': '스테이지 클리어',
+    'perfectClear': '퍼펙트 클리어!',
+    'goldClear': '골드 클리어!',
+    'toFrenzy': '쿠키를 먹자!'
   },
   'ads': {
     'watch': '시청', 'revive': '부활', 'secondChance': '두 번째 기회', 'doubleCoins': '2× 코인', 'plusCoins': '+{n} 코인'
@@ -42,11 +72,7 @@ export default {
   'crazyGamesOnly': '이 게임은 다음에서만 플레이할 수 있습니다',
   'startTouch': '탭하여 시작',
   'startDesktop': '클릭하여 시작',
-  'startSubhint': '위로 굴러가세요 — 방향을 바꿔 구멍과 장애물을 피하세요!',
-  'hints': {
-    'tapToTurn': '탭하여 방향 전환',
-    'clickToTurn': '클릭 / 스페이스로 방향 전환'
-  },
+  'startSubhint': '한쪽을 누른 채로 몰래 이동하고, 손을 떼면 죽은 척합니다. 쿠키 쪽으로 누르고 있으면 조각을 채집하고, 집으로 옮기세요 — 고양이가 깨면 얼어붙으세요!',
   'powerups': {
     'invuln': '무적',
     'magnet': '코인 자석',
@@ -69,7 +95,10 @@ export default {
     'winReward': '+{n} 스테이지 보너스 포함',
     'double': '코인 2배',
     'firstRunDouble': '2배 — 오늘 첫 플레이!',
-   'almost': '거의! {n}칸 남았어요.', 'retry': '다시 시도', },
+    'almost': '거의! {n}칸 남았어요.', 'retry': '다시 시도',
+    'caught': '고양이의 레이저에 증발했습니다!',
+    'timeout': '시간 초과 — 훔친 양이 부족합니다!'
+  },
   'upgrades': {
     'title': '업그레이드',
     'subtitle': '코인을 사용해 영구적으로 강화하세요.',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': '치명적인 타일을 1회 자동 회피 후 재충전 (10초, 레벨당 −0.5초).',
       'deathMagnet': '죽을 때 4타일 이내의 모든 코인을 끌어당김 — 잃었을 코인을 회수합니다.',
       'autoCollect': '근처 타일의 코인을 항상 수집 — 영구적인 1타일 코인 자석.',
-      'rollingBoulder': '상자 장애물을 피해 없이 그대로 굴러서 통과합니다.'
+      'rollingBoulder': '상자 장애물을 피해 없이 그대로 굴러서 통과합니다.',
+      'calmNerves': '고양이가 깬 뒤 멈출 수 있는 유예 시간이 늘어납니다 (레벨당 +0.05초).',
+      'lightPaws': '고양이가 더 오래 잡니다 — 초록불이 길어집니다 (레벨당 +4%).',
+      'extraTime': '모든 주방을 더 많은 시간으로 시작합니다 (레벨당 +5초).',
+      'deepHole': '전리품이 쥐구멍으로 더 빨리 들어갑니다 (레벨당 +12%).',
+      'sixthSense': '레이저 충전이 길어져 회피할 시간이 늘어납니다 (레벨당 +0.15초).'
     },
     'secondChance': {
       'name': '두 번째 기회',

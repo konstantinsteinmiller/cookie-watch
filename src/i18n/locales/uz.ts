@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': 'Yashirincha yurish uchun bir tomonni bosib turing — otilish uchun ikki marta bosing, qo‘yib yuborsangiz o‘lganday bo‘lasiz',
+    'keysToMove': 'Yashirincha yurish uchun ◀ ▶ bosib turing — otilish uchun ikki marta bosing, qo‘yib yuborsangiz o‘lganday bo‘lasiz',
+    'freeze': 'Qotib qol! Qimirlama!',
+    'run': 'Yugur! To‘xtama!'
+  },
   'tutorial': {
-    'breakCookieTouch': 'Pechenyeni sindirish uchun teging',
-    'breakCookieDesktop': 'Pechenyeni sindirish uchun bosing',
-    'playDeadTouch': 'O‘likka o‘xshab yotish uchun pastga suring',
-    'playDeadDesktop': 'O‘likka o‘xshab yotish uchun ↓ ni bosing',
-    'avoidCat': 'Mushuk sizni tutib olmasin'
+    'harvestTouch': 'Yig‘ish uchun pechenye yonida o‘ngni bosib turing',
+    'harvestDesktop': 'Yig‘ish uchun pechenye yonida ▶ bosib turing',
+    'playDeadTouch': 'O‘lganday bo‘lish uchun qo‘yib yuboring',
+    'playDeadDesktop': 'O‘lganday bo‘lish uchun qo‘yib yuboring',
+    'avoidCat': 'Mushukka tutqich berma'
+  },
+  'cat': {
+    'asleep': 'Uxlayapti',
+    'awake': 'Uyg‘ondi'
+  },
+  'frenzy': {
+    'title': 'Ochko‘zlik ziyofati!',
+    'sub': 'Vaqt tugamasdan butun shirinlikni yeb bit!',
+    'tap': 'Bos! Bos! Bos!',
+    'click': 'Bosing! Bosing! Bosing!',
+    'chokeHint': 'Sur’atni saqla — juda tez bo‘lsang bo‘g‘ilib qolasan!',
+    'choking': 'Bo‘g‘ilib qoldi!'
+  },
+  'review': {
+    'title': 'Bosqich yakuni',
+    'delivery': 'Yetkazish',
+    'greedy': 'Ochko‘zlik bonusi',
+    'closeCall': 'Arang qutuldi',
+    'insaneEscape': 'Aqldan ozgan qochish',
+    'daringTotal': 'Jasorat jami',
+    'pass': 'Bosqich o‘tildi',
+    'perfectClear': 'Mukammal!',
+    'goldClear': 'Oltin yakun!',
+    'toFrenzy': 'Pechenyeni ye!'
   },
   'ads': {
     'watch': 'Koʻrish', 'revive': 'Tiriltirish', 'secondChance': 'Ikkinchi imkon', 'doubleCoins': '2× tanga', 'plusCoins': '+{n} tanga'
@@ -43,10 +73,6 @@ export default {
   'startTouch': 'Boshlash uchun bosing',
   'startDesktop': 'Boshlash uchun bosing',
   'startSubhint': "Yuqoriga yumalang — boʻshliqlar va toʻsiqlardan qochish uchun yoʻnalishni oʻzgartiring!",
-  'hints': {
-    'tapToTurn': "Yoʻnalishni oʻzgartirish uchun bosing",
-    'clickToTurn': "Yoʻnalishni oʻzgartirish uchun bosing / Boʻshliq tugmasi"
-  },
   'powerups': {
     'invuln': 'Yengilmas',
     'magnet': 'Tanga magniti',
@@ -69,7 +95,10 @@ export default {
     'winReward': "+{n} bosqich bonusi bilan",
     'double': 'Ikki barobar tangalar',
     'firstRunDouble': '2× — bugungi birinchi oʻyin!',
-   'almost': 'Ozgina qoldi! Yana {n} katak.', 'retry': 'Qayta', },
+    'almost': 'Ozgina qoldi! Yana {n} katak.', 'retry': 'Qayta',
+    'caught': 'Mushukning lazeri seni bug‘ga aylantirdi!',
+    'timeout': 'Vaqt tugadi — yetarlicha o‘g‘irlamading!'
+  },
   'upgrades': {
     'title': 'Yangilanishlar',
     'subtitle': 'Doimiy kuchaytirish uchun tangalarni sarflang.',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': "Bitta halokatli plitadan avtomatik qochadi, soʻng quvvat tiklanadi (10s; har bir darajada −0,5s).",
       'deathMagnet': 'Oʻlganingizda 4 plita ichidagi barcha tangalarni yigʻib oling — yoʻqotadigan tangalaringizni saqlab qoling.',
       'autoCollect': 'Yaqin atrofdagi plitalardan tangalarni doimo yigʻing — doimiy 1 plitalik magnit.',
-      'rollingBoulder': "Quti toʻsiqlaridan toʻgʻridan-toʻgʻri zararsiz yumalab oʻting."
+      'rollingBoulder': 'Quti toʻsiqlaridan toʻgʻridan-toʻgʻri zararsiz yumalab oʻting.',
+      'calmNerves': 'Mushuk uyg‘ongach qotib qolish uchun ko‘proq muhlat (har daraja uchun +0,05 s).',
+      'lightPaws': 'Mushuk uzoqroq uxlaydi — yashil chiroq uzayadi (har daraja uchun +4%).',
+      'extraTime': 'Har oshxonani ko‘proq vaqt bilan boshlang (har daraja uchun +5 s).',
+      'deepHole': 'O‘ljangiz sichqon iniga tezroq tushadi (har daraja uchun +12%).',
+      'sixthSense': 'Lazer uzoqroq zaryadlanadi, shuning uchun chetlanishga ko‘proq vaqt bor (har daraja uchun +0,15 s).'
     },
     'secondChance': {
       'name': 'Ikkinchi imkoniyat',

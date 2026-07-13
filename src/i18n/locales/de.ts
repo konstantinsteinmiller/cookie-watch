@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': 'Halte eine Seite zum Schleichen — doppelt tippen für den Sprint, loslassen zum Totstellen',
+    'keysToMove': 'Halte ◀ ▶ zum Schleichen — doppelt drücken für den Sprint, loslassen zum Totstellen',
+    'freeze': 'Erstarren! Nicht bewegen!',
+    'run': 'Lauf! Nicht stehen bleiben!'
+  },
   'tutorial': {
-    'breakCookieTouch': 'Tippen, um den Keks zu knacken',
-    'breakCookieDesktop': 'Klicken, um den Keks zu knacken',
-    'playDeadTouch': 'Nach unten wischen, um dich totzustellen',
-    'playDeadDesktop': '↓ drücken, um dich totzustellen',
+    'harvestTouch': 'Am Keks rechts gedrückt halten zum Ernten',
+    'harvestDesktop': 'Am Keks ▶ gedrückt halten zum Ernten',
+    'playDeadTouch': 'Loslassen, um dich totzustellen',
+    'playDeadDesktop': 'Loslassen, um dich totzustellen',
     'avoidCat': 'Lass dich nicht von der Katze erwischen'
+  },
+  'cat': {
+    'asleep': 'Schläft',
+    'awake': 'Wach'
+  },
+  'frenzy': {
+    'title': 'Fressrausch!',
+    'sub': 'Verschlinge den ganzen Nachtisch, bevor die Zeit abläuft!',
+    'tap': 'Tippen! Tippen! Tippen!',
+    'click': 'Klicken! Klicken! Klicken!',
+    'chokeHint': 'Teil dir die Kräfte ein — zu schnell und du verschluckst dich!',
+    'choking': 'Verschluckt!'
+  },
+  'review': {
+    'title': 'Level-Auswertung',
+    'delivery': 'Lieferung',
+    'greedy': 'Gier-Bonus',
+    'closeCall': 'Knapp entkommen',
+    'insaneEscape': 'Irre Flucht',
+    'daringTotal': 'Wagemut gesamt',
+    'pass': 'Etappe geschafft',
+    'perfectClear': 'Perfekt geschafft!',
+    'goldClear': 'Gold-Abschluss!',
+    'toFrenzy': 'Iss den Keks!'
   },
   'ads': {
     'watch': 'Ansehen', 'revive': 'Wiederbeleben', 'secondChance': 'Zweite Chance', 'doubleCoins': '2× Münzen', 'plusCoins': '+{n} Münzen'
@@ -42,11 +72,7 @@ export default {
   'crazyGamesOnly': 'Dieses Spiel ist nur verfügbar auf',
   'startTouch': 'Zum Starten tippen',
   'startDesktop': 'Zum Starten klicken',
-  'startSubhint': 'Rolle nach oben — wechsle die Richtung, um Lücken und Hindernissen auszuweichen!',
-  'hints': {
-    'tapToTurn': 'Tippen, um die Richtung zu ändern',
-    'clickToTurn': 'Klick / Leertaste zum Richtungswechsel'
-  },
+  'startSubhint': 'Halte eine Seite gedrückt, um zu schleichen, lass los, um dich totzustellen. Halte in Richtung Keks, um Stücke zu ernten, trage sie nach Hause — und ERSTARRE, wenn die Katze aufwacht!',
   'powerups': {
     'invuln': 'Unverwundbar',
     'magnet': 'Münzmagnet',
@@ -69,7 +95,10 @@ export default {
     'winReward': 'inkl. +{n} Etappenbonus',
     'double': 'Münzen verdoppeln',
     'firstRunDouble': '2× — erster Lauf heute!',
-   'almost': 'Fast! Noch {n} Tiles bis zum Ziel.', 'retry': 'Erneut', },
+    'almost': 'Fast! Noch {n} Tiles bis zum Ziel.', 'retry': 'Erneut',
+    'caught': 'Der Laser der Katze hat dich pulverisiert!',
+    'timeout': 'Zeit abgelaufen — du hast nicht genug gestohlen!'
+  },
   'upgrades': {
     'title': 'Verbesserungen',
     'subtitle': 'Gib Münzen aus, um dich dauerhaft zu verstärken.',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': 'Weicht einem tödlichen Feld automatisch aus, dann Abklingzeit (10s; −0,5s pro Stufe).',
       'deathMagnet': 'Schnapp dir beim Tod jede Münze im Umkreis von 4 Feldern — sichere dir, was du verloren hättest.',
       'autoCollect': 'Sammelt immer Münzen von benachbarten Feldern ein — ein dauerhafter 1-Feld-Münzmagnet.',
-      'rollingBoulder': 'Rolle unbeschadet direkt durch Kisten-Hindernisse.'
+      'rollingBoulder': 'Rolle unbeschadet direkt durch Kisten-Hindernisse.',
+      'calmNerves': 'Längere Gnadenfrist zum Erstarren, nachdem die Katze aufwacht (+0,05 s pro Stufe).',
+      'lightPaws': 'Die Katze schläft länger — längeres grünes Licht (+4 % pro Stufe).',
+      'extraTime': 'Starte jede Küche mit mehr Zeit (+5 s pro Stufe).',
+      'deepHole': 'Deine Beute rutscht schneller ins Mauseloch (+12 % pro Stufe).',
+      'sixthSense': 'Der Laser lädt länger, du hast also mehr Zeit auszuweichen (+0,15 s pro Stufe).'
     },
     'secondChance': {
       'name': 'Zweite Chance',

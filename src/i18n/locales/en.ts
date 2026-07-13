@@ -16,41 +16,42 @@ export default {
   'crazyGamesOnly': 'This game is only available on',
   'startTouch': 'Tap to Start',
   'startDesktop': 'Click to Start',
-  'startSubhint': 'Hold a side to sneak, let go to play dead. Press into the cookie to grab chunks, carry them home — and FREEZE when the cat wakes!',
+  'startSubhint': 'Hold a side to sneak, let go to play dead. Hold into the cookie to harvest chunks, carry them home — and FREEZE when the cat wakes!',
   'hints': {
-    'tapToMove': 'Hold the left or right side to sneak — let go to play dead',
-    'keysToMove': 'Hold ◀ ▶ or A / D to sneak — let go to play dead',
-    'freeze': 'Freeze! Don\'t move!'
+    'tapToMove': 'Hold a side to sneak — double-tap to dash, let go to play dead',
+    'keysToMove': 'Hold ◀ ▶ to sneak — double-tap to dash, let go to play dead',
+    'freeze': 'Freeze! Don\'t move!',
+    'run': 'Run! Don\'t stop!'
   },
   'tutorial': {
-    'breakCookieTouch': 'Tap to break the cookie',
-    'breakCookieDesktop': 'Click to break the cookie',
-    'playDeadTouch': 'Swipe down to play dead',
-    'playDeadDesktop': 'Press ↓ to play dead',
+    'harvestTouch': 'Hold right at the cookie to harvest',
+    'harvestDesktop': 'Hold ▶ at the cookie to harvest',
+    'playDeadTouch': 'Let go to play dead',
+    'playDeadDesktop': 'Let go to play dead',
     'avoidCat': 'Don’t let the cat catch you'
   },
   'cat': {
     'asleep': 'Asleep',
-    'stirring': 'Stirring',
-    'awake': 'Awake',
-    'alert': 'Alert!',
-    'pounce': 'Pouncing!'
+    'awake': 'Awake'
   },
   'frenzy': {
     'title': 'Eating Frenzy!',
-    'sub': 'Devour the stolen cookie before time runs out!',
+    'sub': 'Devour the whole dessert before time runs out!',
     'tap': 'Tap! Tap! Tap!',
-    'click': 'Click! Click! Click!'
+    'click': 'Click! Click! Click!',
+    'chokeHint': 'Pace yourself — mash too fast and you’ll choke!',
+    'choking': 'Choking!'
   },
   'review': {
     'title': 'Level Review',
-    'chunkPoints': 'Cookie Chunks',
-    'greedyMult': 'Greedy Multiplier',
-    'greedyFinish': 'Greedy Finish',
-    'sneaky': 'Sneaky Bonus',
-    'lucky': 'Lucky Escape',
-    'speedy': 'Speedy Bonus',
+    'delivery': 'Delivery',
+    'greedy': 'Greedy Bonus',
+    'closeCall': 'Close Call',
+    'insaneEscape': 'Insane Escape',
     'daringTotal': 'Daring Total',
+    'pass': 'Stage Clear',
+    'perfectClear': 'Perfect Clear!',
+    'goldClear': 'Gold Clear!',
     'toFrenzy': 'Eat the Cookie!'
   },
   'secondChance': {
@@ -62,9 +63,8 @@ export default {
   'result': {
     'win': 'STAGE CLEAR!',
     'lose': 'CAUGHT!',
-    'caught': 'The cat pounced on you!',
-    'trap': 'Snap! You hit a mousetrap!',
-    'timeout': 'The cat woke up — out of time!',
+    'caught': 'The cat’s laser vaporized you!',
+    'timeout': 'Out of time — you didn’t steal enough!',
     'outOfLives': 'Out of lives — back to the first kitchen.',
     'daring': 'Daring Total',
     'scoreLost': 'Score lost',
@@ -144,11 +144,11 @@ export default {
       'sixthSense': 'Sixth Sense'
     },
     'descriptions': {
-      'calmNerves': 'The cat stirs more slowly from your noise (−6% per level).',
-      'lightPaws': 'Missteps make less noise (−0.5 alert per level).',
+      'calmNerves': 'A longer grace buffer to freeze after the cat wakes (+0.05s per level).',
+      'lightPaws': 'The cat sleeps longer — a longer green light (+4% per level).',
       'extraTime': 'Start every kitchen with more time (+5s per level).',
-      'deepHole': 'The cat calms faster while you hide in the hole.',
-      'sixthSense': 'You get an extra beat before the cat pounces (+0.15s per level).'
+      'deepHole': 'Your haul drops down the mouse hole faster (+12% per level).',
+      'sixthSense': 'The laser takes longer to charge, so you get longer to dodge (+0.15s per level).'
     },
     'secondChance': {
       'name': 'Second Chance',

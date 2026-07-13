@@ -24,7 +24,6 @@ import { startGameplay, stopGameplay } from '@/use/useCrazyGames'
 import { playFirstStartInterstitial } from '@/use/useFirstStartInterstitial'
 
 import StageBadge from '@/components/StageBadge.vue'
-import AwarenessMeter from '@/components/atoms/AwarenessMeter.vue'
 import LivesBadge from '@/components/atoms/LivesBadge.vue'
 import CoinBadge from '@/components/organisms/CoinBadge.vue'
 import TreasureChest from '@/components/organisms/TreasureChest.vue'
@@ -37,18 +36,18 @@ import AchievementsButton from '@/components/organisms/AchievementsButton.vue'
 import OptionsModal from '@/components/organisms/OptionsModal.vue'
 import EpicUpgradesModal from '@/components/organisms/EpicUpgradesModal.vue'
 import MissionsModal from '@/components/organisms/MissionsModal.vue'
+import StarRating from '@/components/atoms/StarRating.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import IconMovie from '@/components/icons/IconMovie.vue'
 
 const { t } = useI18n()
 const cookie = useCookieGame()
 const {
-  phase, lossCause, lives, timeLeft, awarenessPct, catState,
-  chunksDeposited, cookieTotal, atCookie,
-  mustFreeze, frenzyPct, frenzyTimeLeft,
-  reviewData, lastDaringTotal, stageTarget,
-  begin, resetForStage, pressDir, releaseDir, releaseAllDirs,
-  tapCookie, playDeadAtCookie,
+  phase, lossCause, lives, timeLeft, depositedValue,
+  passTarget, perfectTarget, slotsUsed, mustFreeze, mustRun, enraged,
+  frenzyTimeLeft, chokePct, frenzyNext,
+  reviewData, lastDaringTotal,
+  begin, resetForStage, pressDir, releaseDir, releaseAllDirs, dropItem,
   startFrenzy, frenzyTap, revive, confirmLoss
 } = cookie
 const progress = useEpicProgress()
@@ -92,10 +91,24 @@ const loop = (tNow: number): void => {
   const live = phase.value === 'playing' || phase.value === 'frenzy'
   if (!isGamePaused.value && live) cookie.step(dt)
   else cookie.step(0)
-  if (ctx) drawScene(ctx, cssW, cssH, performance.now())
+  if (ctx) {
+    drawScene(ctx, cssW, cssH, performance.now(), {
+      pass: passTarget.value,
+      perfect: perfectTarget.value,
+      timeLeft: phase.value === 'frenzy' ? frenzyTimeLeft.value : timeLeft.value,
+      choke: chokePct.value
+    })
+  }
 }
 
 // ─── Input ────────────────────────────────────────────────────────────────
+// Rev 5 controls (§A):
+//   Sneak     hold ◀ ▶ / A · D, or hold a screen half
+//   Dash      double-tap and HOLD the same direction (the engine times this)
+//   Hide      release everything — the Mouse instantly plays dead
+//   Harvest   hold the direction INTO the dessert (right); the engine runs the
+//             1.5s green ring for as long as it's held
+//   Drop      Spacebar, or swipe up
 let startingRun = false
 const startRun = async (): Promise<void> => {
   if (startingRun || phase.value !== 'idle') return
@@ -108,41 +121,24 @@ const startRun = async (): Promise<void> => {
   }
 }
 
+const modalUp = computed(() =>
+  showResult.value || showSecondChance.value || showReview.value || showInstructions.value)
+
 const onCanvasDown = (e: PointerEvent): void => {
   try { window.focus() } catch { /* cross-origin parent — ignore */ }
   e.preventDefault()
-  if (showResult.value || showSecondChance.value || showReview.value || showInstructions.value) return
+  if (modalUp.value) return
   if (phase.value === 'idle') void startRun()
   else if (phase.value === 'frenzy') frenzyTap()
 }
 
-const onDirDown = (dir: Dir): void => {
-  if (phase.value !== 'playing') return
-  // At the cookie a forward press is a crack tap, not a walk (Rev 3).
-  if (dir === 'right' && atCookie.value) {
-    tapCookie()
-    return
-  }
-  pressDir(dir)   // engine ramps to one top speed while held
-}
-const onDirUp = (dir: Dir): void => {
-  releaseDir(dir)
-}
-const onInteract = (): void => {
-  if (phase.value === 'frenzy') frenzyTap()
-  else if (phase.value === 'idle') void startRun()
-}
-
 // Invisible left/right touch zones (mobile + desktop mouse). Holding a screen
-// half sneaks that way. We deliberately DON'T pointer-capture, so sliding off a
-// half fires pointerleave and releases that direction.
-//
-// Rev 3: at the cookie the RIGHT zone stops being a "hold to move" and becomes a
-// crack tapper — each press chips the cookie — while dragging a finger DOWN
-// there drops the Mouse into a play-dead crouch (the only way to hide up close).
-const SLIDE_DOWN_PX = 40
-let zoneLastY = 0
-let zoneDownAccum = 0
+// half sneaks that way; a quick second tap+hold on the same half dashes. We
+// deliberately DON'T pointer-capture, so sliding off a half fires pointerleave
+// and releases that direction. Swiping UP on either half panic-drops an item.
+const SWIPE_UP_PX = 44
+const zoneStartY: Partial<Record<Dir, number>> = {}
+const zoneSwiped: Partial<Record<Dir, boolean>> = {}
 
 const onZonePress = (dir: Dir, e: PointerEvent): void => {
   e.preventDefault()
@@ -151,44 +147,28 @@ const onZonePress = (dir: Dir, e: PointerEvent): void => {
   } catch { /* cross-origin parent — ignore */
   }
   if (phase.value !== 'playing') return
-  if (dir === 'right') {
-    zoneLastY = e.clientY
-    zoneDownAccum = 0
-  }
-  if (dir === 'right' && atCookie.value) {
-    tapCookie()             // discrete crack tap (also resumes from play-dead)
-    return
-  }
-  onDirDown(dir)
+  zoneStartY[dir] = e.clientY
+  zoneSwiped[dir] = false
+  pressDir(dir)
 }
 const onZoneMove = (dir: Dir, e: PointerEvent): void => {
-  if (dir !== 'right') return
-  const dy = e.clientY - zoneLastY
-  zoneLastY = e.clientY
-  if (phase.value !== 'playing' || !atCookie.value) {
-    zoneDownAccum = 0
-    return
-  }
-  if (dy > 0) zoneDownAccum += dy
-  else if (dy < -2) zoneDownAccum = 0          // moving back up cancels the slide
-  if (zoneDownAccum > SLIDE_DOWN_PX) {
-    zoneDownAccum = 0
-    onDirUp('right')        // stop any walk-in, then crouch
-    playDeadAtCookie()
-  }
+  if (phase.value !== 'playing' || zoneStartY[dir] === undefined || zoneSwiped[dir]) return
+  if (zoneStartY[dir]! - e.clientY < SWIPE_UP_PX) return
+  // Swipe up = panic-drop. One drop per gesture; the sneak hold keeps running.
+  zoneSwiped[dir] = true
+  dropItem()
 }
 const onZoneRelease = (dir: Dir): void => {
-  onDirUp(dir)
+  zoneStartY[dir] = undefined
+  zoneSwiped[dir] = false
+  releaseDir(dir)
 }
 
-// Rev 2: movement is a single left/right axis. Keyboard keeps ◀ ▶ / A · D for
-// desktop; up/down are gone, and the on-screen pad is replaced by invisible
-// left/right screen-half touch zones.
 const KEY_DIR: Record<string, Dir> = {
   ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right'
 }
-// Genuine key-down codes (the OS auto-repeats keydown while held; we ignore
-// repeats so a single hold = one continuous sneak, and a real double-tap runs).
+// The OS auto-repeats keydown while a key is held; we ignore the repeats so one
+// hold = one continuous sneak — and so a real double-tap reads as a dash.
 const downCodes = new Set<string>()
 const onKeyDown = (e: KeyboardEvent): void => {
   const tgt = e.target
@@ -198,24 +178,23 @@ const onKeyDown = (e: KeyboardEvent): void => {
     e.preventDefault()
     if (downCodes.has(e.code)) return
     downCodes.add(e.code)
-    onDirDown(mapped)
-  } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
-    // Rev 3 desktop equivalent of "slide finger down at the cookie" → play dead.
-    e.preventDefault()
-    if (phase.value === 'playing' && atCookie.value) playDeadAtCookie()
+    if (phase.value === 'playing') pressDir(mapped)
   } else if (e.code === 'Space' || e.code === 'Enter') {
     e.preventDefault()
-    onInteract()
+    if (modalUp.value) return
+    if (phase.value === 'playing') dropItem()
+    else if (phase.value === 'frenzy') frenzyTap()
+    else if (phase.value === 'idle') void startRun()
   }
 }
 const onKeyUp = (e: KeyboardEvent): void => {
   const mapped = KEY_DIR[e.code]
   if (!mapped) return
   downCodes.delete(e.code)
-  onDirUp(mapped)
+  releaseDir(mapped)
 }
-// Letting go of focus (alt-tab, ad overlay) must drop every held direction so
-// the Mouse doesn't keep sneaking into a stomp while the player is away.
+// Losing focus (alt-tab, ad overlay) must drop every held direction so the Mouse
+// doesn't keep sneaking into a laser while the player is away.
 const onBlur = (): void => {
   downCodes.clear()
   releaseAllDirs()
@@ -230,24 +209,23 @@ const showReview = ref(false)
 const isAdInFlight = ref(false)
 const firstRunBonusActive = ref(false)
 
-// Control hints (GDD: "Tap to move" / "Click to move"). Shown the first two
-// stages only, then hidden to keep the board clean.
-const showHint = computed(() => phase.value === 'playing' && progress.stage.value < 3)
+const showHint = computed(() => phase.value === 'playing' && progress.stage.value < 3 &&
+  !mustFreeze.value && !mustRun.value)
 const hintText = computed(() => isMobilePortrait.value ? t('hints.tapToMove') : t('hints.keysToMove'))
 const startText = computed(() => isMobilePortrait.value ? t('startTouch') : t('startDesktop'))
 
-// ─── First-level instruction card (Rev 4) ────────────────────────────────────
-// A one-shot tutorial screen shown the very first time the player reaches the
-// cookie in the first kitchen. Two pages: how to break the cookie + play dead,
-// then a "don't get caught" beat. The game is paused (app-pause) while it's up.
+// ─── First-level instruction card ────────────────────────────────────────────
+// A one-shot tutorial shown the first time the player reaches the dessert in the
+// first kitchen. Page 1 teaches the harvest hold + play dead; page 2 the Cat.
+// The game is app-paused while it's up.
 const INSTR_SEEN_KEY = 'cw_instr_seen'
 const showInstructions = ref(false)
 const instrPage = ref(0)
 const instrSeen = ref(getState<boolean>(INSTR_SEEN_KEY, false) === true)
 let releaseInstrPause: (() => void) | null = null
 
-const breakCookieText = computed(() =>
-  isMobilePortrait.value ? t('tutorial.breakCookieTouch') : t('tutorial.breakCookieDesktop'))
+const harvestText = computed(() =>
+  isMobilePortrait.value ? t('tutorial.harvestTouch') : t('tutorial.harvestDesktop'))
 const playDeadText = computed(() =>
   isMobilePortrait.value ? t('tutorial.playDeadTouch') : t('tutorial.playDeadDesktop'))
 const instrContinueText = computed(() =>
@@ -269,25 +247,26 @@ const onInstrContinue = (): void => {
   dismissInstructions()
 }
 
-// Surface the card the first time the Mouse stands at the cookie in kitchen 1.
-watch(atCookie, (at) => {
+watch(cookie.atDessert, (at) => {
   if (at && !instrSeen.value && !showInstructions.value &&
     phase.value === 'playing' && progress.stage.value === 1) {
     instrPage.value = 0
     showInstructions.value = true
     releaseInstrPause = acquireAppPause()
+    releaseAllDirs()
   }
 })
 
-// "Freeze!" warning — the cat is watching and the Mouse must hold still.
-const freezeWarn = computed(() => phase.value === 'playing' && mustFreeze.value)
+// "Freeze!" while the Cat is watching; "RUN!" the moment the laser starts
+// charging — because once it's charging, holding still is a guaranteed hit.
+const freezeWarn = computed(() => phase.value === 'playing' && mustFreeze.value && !mustRun.value)
+const runWarn = computed(() => phase.value === 'playing' && mustRun.value)
 
-// Timer display (mm:ss) + low-time pulse.
 const timeDisplay = computed(() => {
   const s = Math.max(0, Math.ceil(timeLeft.value))
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 })
-const lowTime = computed(() => timeLeft.value <= 15)
+const lowTime = computed(() => timeLeft.value <= 10)
 
 // ─── 2× reward / second chance cooldowns ─────────────────────────────────────
 const SECOND_CHANCE_COOLDOWN = 30_000
@@ -298,7 +277,7 @@ const twoXUsed = ref(false)
 const tickNow = ref(Date.now())
 
 const winReward = computed(() => Math.max(5, Math.min(500, Math.round(lastDaringTotal.value / 150))))
-const runTotalCoins = computed(() => phase.value === 'won' ? winReward.value : chunksDeposited.value)
+const runTotalCoins = computed(() => phase.value === 'won' ? winReward.value : Math.round(depositedValue.value))
 const twoXAvailable = computed(() =>
   !twoXUsed.value && isRewardedReady.value && runTotalCoins.value > 0 &&
   (firstRunBonusActive.value || tickNow.value >= twoXReadyAt)
@@ -308,7 +287,12 @@ const secondChanceEligible = (): boolean =>
 
 const todayKey = (): string => new Date().toISOString().slice(0, 10)
 const finishRun = (cleared: boolean): void => {
-  const run = { tiles: lastDaringTotal.value, coins: runTotalCoins.value, items: chunksDeposited.value, cleared }
+  const run = {
+    tiles: lastDaringTotal.value,
+    coins: runTotalCoins.value,
+    items: Math.round(depositedValue.value),
+    cleared
+  }
   recordRun(run)
   recordAchievementRun(run)
   firstRunBonusActive.value = getState<string>(DAILY_BONUS_DAY_KEY, '') !== todayKey()
@@ -335,7 +319,7 @@ const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const onDeath = async (): Promise<void> => {
   stopBattleMusic()
   playSound('lose', 0.07)
-  await wait(450)
+  await wait(650)
   if (phase.value !== 'dead') return
   if (secondChanceEligible()) {
     lastSecondChanceAt = Date.now()
@@ -377,7 +361,7 @@ const presentLoseScreen = async (): Promise<void> => {
   if (loseScreenCount % LOSE_AD_EVERY === 0) await presentResultInterstitial()
 }
 
-// Stage fully cleared → Level Review tally.
+// Level cleared → the Level Review tally + star rating.
 const onReview = (): void => {
   stopBattleMusic()
   playSound('celebration-2', 0.06)
@@ -385,10 +369,10 @@ const onReview = (): void => {
 }
 const onReviewContinue = (): void => {
   showReview.value = false
-  startFrenzy()
+  startFrenzy()   // no-op → straight to 'won' unless this was every-5th level
 }
 
-// Eating Frenzy finished (engine flips to 'won') → Win screen.
+// Level banked (engine flips to 'won') → Win screen.
 const onWin = async (): Promise<void> => {
   awardCampaignWin()
   twoXUsed.value = false
@@ -457,23 +441,33 @@ const fireCoinExplosion = (sourceEl: HTMLElement): void => {
   if (coinBadgeEl.value) spawnCoinExplosion({ sourceEl, targetEl: coinBadgeEl.value })
 }
 
-// ─── Review tally rows (staggered reveal) ────────────────────────────────────
+// ─── Review tally rows (§H) ──────────────────────────────────────────────────
 const reviewRows = computed(() => {
   const r = reviewData.value
   const rows: { key: string; label: string; value: string }[] = [
-    { key: 'chunks', label: t('review.chunkPoints'), value: '+' + r.chunkPoints.toLocaleString() }
+    { key: 'delivery', label: t('review.delivery'), value: '+' + r.delivery.toLocaleString() }
   ]
-  if (r.greedyMult > 1) rows.push({ key: 'greedy', label: t('review.greedyMult'), value: '×' + r.greedyMult.toFixed(2) })
-  if (r.greedyFinish > 0) rows.push({ key: 'finish', label: t('review.greedyFinish'), value: '+' + r.greedyFinish.toLocaleString() })
-  if (r.sneaky > 0) rows.push({ key: 'sneaky', label: t('review.sneaky'), value: '+' + r.sneaky.toLocaleString() })
-  if (r.lucky > 0) rows.push({ key: 'lucky', label: t('review.lucky'), value: '+' + r.lucky.toLocaleString() })
-  if (r.speedy > 0) rows.push({ key: 'speedy', label: t('review.speedy'), value: '+' + r.speedy.toLocaleString() })
+  if (r.greedyBonus > 0) rows.push({
+    key: 'greedy',
+    label: t('review.greedy'),
+    value: '+' + r.greedyBonus.toLocaleString()
+  })
+  if (r.closeCall > 0) rows.push({
+    key: 'close',
+    label: t('review.closeCall'),
+    value: '+' + r.closeCall.toLocaleString()
+  })
+  if (r.insaneEscape > 0) rows.push({
+    key: 'insane',
+    label: t('review.insaneEscape'),
+    value: '+' + r.insaneEscape.toLocaleString()
+  })
   return rows
 })
 
 watch(phase, (p, prev) => {
-  if (p !== 'playing') onBlur()   // leaving play drops any held sneak input
-  if (p !== 'playing') dismissInstructions()   // never leave the card (+ its pause) hanging
+  if (p !== 'playing') onBlur()               // leaving play drops any held input
+  if (p !== 'playing') dismissInstructions()  // never leave the card (+ its pause) hanging
   if (p === 'playing' && prev !== 'playing') startBattleMusic()
   if (p === 'dead' && prev === 'playing') void onDeath()
   if (p === 'review' && prev === 'playing') onReview()
@@ -482,7 +476,16 @@ watch(phase, (p, prev) => {
   else stopGameplay()
 })
 
+// §C: the music cuts out completely the instant the Cat opens its eyes — the
+// silence IS the danger cue — and comes back when it drops off again.
+watch(mustFreeze, (freeze) => {
+  if (phase.value !== 'playing') return
+  if (freeze) stopBattleMusic()
+  else startBattleMusic()
+})
+
 // ─── Lifecycle ──────────────────────────────────────────────────────────────
+let tickTimer = 0
 onMounted(() => {
   resetForStage()
   nextTick(resize)
@@ -494,7 +497,6 @@ onMounted(() => {
   rafId = requestAnimationFrame(loop)
   tickTimer = window.setInterval(() => { tickNow.value = Date.now() }, 250)
 })
-let tickTimer = 0
 onUnmounted(() => {
   cancelAnimationFrame(rafId)
   window.removeEventListener('resize', resize)
@@ -529,20 +531,18 @@ onUnmounted(() => {
           paddingRight: 'calc(0.5rem + env(safe-area-inset-right, 0px))'\
         }"
       )
-        StageBadge(:stage-id="progress.stage.value" :cleared="chunksDeposited" :target="stageTarget")
-        //- Rev 3: coins + chest are cleared from the play screen so the Cat reads
-        //- cleanly; they return between runs (kept mounted for coin animations).
-        div.flex.flex-col.items-end.gap-4(v-show="phase !== 'playing' && phase !== 'dead'")
+        StageBadge(:stage-id="progress.stage.value" :cleared="depositedValue" :target="perfectTarget")
+        div.flex.flex-col.items-end.gap-4(v-show="phase !== 'playing' && phase !== 'dead' && phase !== 'frenzy'")
           CoinBadge(ref="coinBadgeRef")
           TreasureChest(:target-el="coinBadgeEl")
 
       //- Invisible left / right control zones (mobile touch + desktop mouse):
-      //- hold the left half to sneak home, the right half toward the cookie.
-      //- Centred so each covers exactly half the screen.
+      //- hold a half to sneak, double-tap+hold to dash, swipe up to panic-drop.
       div.absolute.inset-0.flex(class="z-[1]" v-show="phase === 'playing'")
         div.h-full.pointer-events-auto.touch-none(
           class="w-1/2"
           @pointerdown="onZonePress('left', $event)"
+          @pointermove="onZoneMove('left', $event)"
           @pointerup="onZoneRelease('left')"
           @pointerleave="onZoneRelease('left')"
           @pointercancel="onZoneRelease('left')"
@@ -558,64 +558,52 @@ onUnmounted(() => {
           @contextmenu.prevent
         )
 
-      //- Above the mouse hole (the "door"): just the time clock and the total
-      //- cookies-acquired box (Rev 3 removed the points + haul + lives from here).
+      //- Above the Mouse Door: the level clock + the banked chunk value.
       div.absolute.flex.flex-col.items-center.gap-1(
         v-if="phase === 'playing' || phase === 'dead'"
         class="z-[5] -translate-x-1/2"
         :style="{\
           left: 'calc(14% + env(safe-area-inset-left, 0px))',\
-          top: 'calc(36% + env(safe-area-inset-top, 0px))'\
+          top: 'calc(30% + env(safe-area-inset-top, 0px))'\
         }"
       )
-        //- time clock (top)
         div.flex.items-center.gap-1.rounded-full.px-2(
           class="py-0.5 bg-black/40 border border-white/10"
-          :class="lowTime ? 'animate-pulse' : ''"
+          :class="lowTime || enraged ? 'animate-pulse' : ''"
         )
-          svg(viewBox="0 0 24 24" class="w-4 h-4" :class="lowTime ? 'text-red-400' : 'text-white/70'" fill="currentColor")
+          svg(viewBox="0 0 24 24" class="w-4 h-4" :class="lowTime || enraged ? 'text-red-400' : 'text-white/70'" fill="currentColor")
             path(d="M12 2 a10 10 0 1 0 0.001 0 Z M12 6 v6 l4 2" fill="none" stroke="currentColor" stroke-width="2")
-          span.game-text.font-black.leading-none(class="text-sm sm:text-base" :class="lowTime ? 'text-red-300' : 'text-white'") {{ timeDisplay }}
-        //- total cookies acquired this stage (kept)
+          span.game-text.font-black.leading-none(class="text-sm sm:text-base" :class="lowTime || enraged ? 'text-red-300' : 'text-white'") {{ timeDisplay }}
         div.flex.items-center.gap-1.rounded-full.px-2(class="py-0.5 bg-black/40 border border-white/10")
           span.text-base {{ '🍪' }}
-          span.game-text.font-black.text-white.leading-none(class="text-sm sm:text-base") {{ chunksDeposited }}/{{ cookieTotal }}
+          span.game-text.font-black.text-white.leading-none(class="text-sm sm:text-base") {{ depositedValue }}/{{ perfectTarget }}
 
       //- Tap-to-start prompt
       div.absolute.inset-0.flex.items-center.justify-center.z-10(v-if="phase === 'idle'" class="pointer-events-none")
         div.text-center.px-6
-          //- Rev 3: the long pre-start instructions are gone; only "Tap to Start"
-          //- remains here (the movement reminder still shows once you're playing).
           div.text-white.font-black.uppercase.tracking-wider.animate-pulse.game-text(class="text-3xl sm:text-5xl mb-2") {{ startText }}
 
-      //- Control hint (Hold/Release to sneak) — first stages only
+      //- Control hint — first kitchens only
       Transition(name="fade")
         div.absolute.left-0.right-0.flex.justify-center.z-10(
-          v-if="showHint && !freezeWarn"
-          :style="{ bottom: 'calc(13rem + env(safe-area-inset-bottom, 0px))' }"
+          v-if="showHint"
+          :style="{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }"
         )
           div.text-white.italic.game-text.opacity-80(class="text-xs sm:text-sm px-3 py-1 rounded-full bg-black/40") {{ hintText }}
 
-      //- FREEZE! warning — the cat is awake, the Mouse must hold still
+      //- FREEZE! (the Cat is watching) — then RUN! the instant the laser charges,
+      //- because standing still through a charge is a guaranteed direct hit.
       Transition(name="fade")
         div.absolute.left-0.right-0.flex.justify-center.z-10(
-          v-if="freezeWarn"
+          v-if="freezeWarn || runWarn"
           :style="{ top: 'calc(13rem + env(safe-area-inset-top, 0px))' }"
         )
-          div.font-black.uppercase.tracking-widest.game-text.animate-pulse(
-            class="text-2xl sm:text-4xl px-4 py-1 rounded-xl bg-red-700/70 border-2 border-red-300 text-white"
-          ) {{ t('hints.freeze') }}
+          div.font-black.uppercase.tracking-widest.game-text.animate-pulse.border-2.text-white(
+            class="text-2xl sm:text-4xl px-4 py-1 rounded-xl"
+            :class="runWarn ? 'bg-orange-600/80 border-yellow-200' : 'bg-red-700/70 border-red-300'"
+          ) {{ runWarn ? t('hints.run') : t('hints.freeze') }}
 
-      //- Cat-alertness meter — moved to the bottom, clear of the Cat's face.
-      div.absolute.left-0.right-0.flex.justify-center.pointer-events-none(
-        v-if="phase === 'playing' || phase === 'dead'"
-        class="z-[5]"
-        :style="{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }"
-      )
-        AwarenessMeter(:value="awarenessPct" :state="catState")
-
-      //- Bottom-left: total player lives during a run (Rev 3); otherwise the
-      //- mute + settings + meta cluster (cleared from the play screen).
+      //- Bottom-left: lives during a run; otherwise the meta cluster.
       div.absolute.pointer-events-auto.z-50.flex.flex-col.items-start.gap-1(
         :style="{\
           bottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',\
@@ -668,28 +656,33 @@ onUnmounted(() => {
                 svg(viewBox="0 0 24 24" class="w-7 h-7 text-white" fill="currentColor")
                   path(d="M4 14 L12 6 L20 14 H15 V20 H9 V14 Z" stroke="black" stroke-width="0.8")
 
-    //- ── Eating Frenzy overlay (canvas draws the scene; HUD is the prompt) ──
+    //- ── Eating Frenzy (§I) — the canvas draws the dessert, the zipping mouse,
+    //- the big TIME and the choke meter; the DOM adds the title + mash button. ──
     Transition(name="fade")
       div.absolute.inset-0.flex.flex-col.items-center.justify-between.pointer-events-none.z-20(
         v-if="phase === 'frenzy'"
         :style="{\
-          paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))',\
+          paddingTop: 'calc(0.5rem + env(safe-area-inset-top, 0px))',\
           paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))'\
         }"
       )
-        div.text-center
-          div.text-yellow-300.font-black.uppercase.tracking-widest.game-text.animate-pulse(class="text-3xl sm:text-5xl") {{ t('frenzy.title') }}
-          div.text-white.game-text.opacity-80(class="text-sm sm:text-base") {{ t('frenzy.sub') }}
-          div.text-white.font-black.game-text.mt-1(class="text-lg sm:text-2xl") {{ frenzyTimeLeft.toFixed(1) }}s
-        div.w-full.flex.flex-col.items-center.gap-3.px-6
-          div.relative.rounded-full.overflow-hidden.border-2.border-yellow-200(class="w-[80vw] max-w-md h-5 bg-black/50")
-            div.absolute.inset-y-0.left-0.bg-gradient-to-r.from-yellow-300.to-orange-500(:style="{ width: frenzyPct + '%', transition: 'width 0.1s linear' }")
-          button.pointer-events-auto.cursor-pointer.rounded-2xl.border-2.border-yellow-200.px-8.py-4.font-black.uppercase.game-text.text-white.bg-gradient-to-b.from-orange-400.to-red-600(
-            class="text-xl sm:text-2xl active:scale-95"
-            @pointerdown.prevent="frenzyTap"
-          ) {{ isMobilePortrait ? t('frenzy.tap') : t('frenzy.click') }}
+        //- Title block. The choke coaching lives up here too — the canvas owns
+        //- the whole lower band (choke meter) and the middle (the dessert), so
+        //- anything else down there would sit on top of the meter.
+        div.text-center.px-4
+          div.text-yellow-300.font-black.uppercase.tracking-widest.game-text.animate-pulse(class="text-2xl sm:text-4xl") {{ t('frenzy.title') }}
+          div.text-yellow-200.game-text.font-black.uppercase.animate-pulse(
+            v-if="cookie.choking.value"
+            class="text-base sm:text-xl"
+          ) {{ t('frenzy.choking') }}
+          div.text-white.game-text.opacity-70(v-else class="text-xs sm:text-sm") {{ t('frenzy.chokeHint') }}
+        button.pointer-events-auto.cursor-pointer.rounded-2xl.border-2.border-yellow-200.px-8.py-3.font-black.uppercase.game-text.text-white.bg-gradient-to-b.from-orange-400.to-red-600(
+          class="text-xl sm:text-2xl active:scale-95 disabled:opacity-50"
+          :disabled="cookie.choking.value"
+          @pointerdown.prevent="frenzyTap"
+        ) {{ isMobilePortrait ? t('frenzy.tap') : t('frenzy.click') }}
 
-    //- ── First-level instruction card (Rev 4) ────────────────────────────
+    //- ── First-level instruction card ────────────────────────────────────
     Transition(name="fade")
       div.fixed.inset-0.flex.items-center.justify-center.backdrop-blur-md.p-4(
         v-if="showInstructions"
@@ -701,12 +694,12 @@ onUnmounted(() => {
         div.flex.flex-col.items-center.gap-5.rounded-2xl.border-2.shadow-2xl.w-full(
           class="bg-gradient-to-b from-[#16321f] to-[#0a1a10] border-yellow-300 px-6 py-6 max-w-sm"
         )
-          //- Page 1: break the cookie + play dead, side by side.
+          //- Page 1: hold into the dessert to harvest + let go to play dead.
           template(v-if="instrPage === 0")
             div.flex.items-stretch.justify-center.w-full(class="gap-3 sm:gap-4")
               div.flex-1.flex.flex-col.items-center.gap-2.text-center
                 div.leading-none(class="text-4xl sm:text-5xl") 🐭🍪
-                span.text-white.game-text(class="text-xs sm:text-sm") {{ breakCookieText }}
+                span.text-white.game-text(class="text-xs sm:text-sm") {{ harvestText }}
               div.w-px.self-stretch(class="bg-white/20")
               div.flex-1.flex.flex-col.items-center.gap-2.text-center
                 div.leading-none.rotate-180(class="text-4xl sm:text-5xl") 🐭
@@ -718,7 +711,7 @@ onUnmounted(() => {
               span.text-white.game-text(class="text-sm sm:text-base") {{ t('tutorial.avoidCat') }}
           div.text-yellow-200.game-text.uppercase.tracking-wider.animate-pulse(class="text-xs sm:text-sm") {{ instrContinueText }}
 
-    //- ── Level Review overlay ────────────────────────────────────────────
+    //- ── Level Review overlay (§E ratings + §H scoring) ───────────────────
     Transition(name="fade")
       div.fixed.inset-0.flex.items-center.justify-center.backdrop-blur-md.p-4(
         v-if="showReview"
@@ -729,6 +722,11 @@ onUnmounted(() => {
           class="bg-gradient-to-b from-[#16321f] to-[#0a1a10] border-yellow-300 px-6 py-5 max-w-sm"
         )
           div.font-black.uppercase.tracking-wider.game-text.text-yellow-300(class="text-2xl sm:text-3xl") {{ t('review.title') }}
+          StarRating(:stars="reviewData.stars" :platinum="reviewData.platinum")
+          div.game-text.uppercase.tracking-wider.font-black(
+            :class="reviewData.platinum ? 'text-cyan-200' : 'text-white/70'"
+            class="text-xs sm:text-sm"
+          ) {{ reviewData.platinum ? t('review.goldClear') : reviewData.stars >= 3 ? t('review.perfectClear') : t('review.pass') }}
           div.flex.flex-col.gap-1.w-full
             div.flex.justify-between.items-center.review-row.w-full(
               v-for="(row, i) in reviewRows"
@@ -744,7 +742,7 @@ onUnmounted(() => {
           button.cursor-pointer.transition-transform.w-full.mt-1(
             class="px-4 py-2 rounded-lg bg-gradient-to-b from-[#5cd16d] to-[#2e9a4a] border-2 border-[#0a3a1c] text-white font-black uppercase game-text hover:scale-[103%] active:scale-95"
             @click="onReviewContinue"
-          ) {{ t('review.toFrenzy') }}
+          ) {{ frenzyNext ? t('review.toFrenzy') : t('continue') }}
 
     //- ── Second-chance overlay ───────────────────────────────────────────
     Transition(name="fade")
@@ -789,19 +787,17 @@ onUnmounted(() => {
           class="text-3xl sm:text-5xl"
           :class="phase === 'won' ? 'text-green-400' : 'text-red-400'"
         ) {{ phase === 'won' ? t('result.win') : t('result.lose') }}
+        StarRating(v-if="phase === 'won'" :stars="reviewData.stars" :platinum="reviewData.platinum")
         div.text-white.game-text.text-center.opacity-80(v-if="phase !== 'won'" class="text-sm sm:text-base")
-          | {{ lossCause === 'timeout' ? t('result.timeout') : lossCause === 'trap' ? t('result.trap') : t('result.caught') }}
+          | {{ lossCause === 'timeout' ? t('result.timeout') : t('result.caught') }}
         div.text-yellow-200.game-text.text-center.font-black.animate-pulse(v-if="phase !== 'won' && outOfLives" class="text-sm sm:text-base") {{ t('result.outOfLives') }}
-        //- Daring total (win) / lost score (lose)
         div.flex.items-center.gap-2.text-white.game-text(class="text-base sm:text-lg")
           span.opacity-70.uppercase.tracking-wider.text-xs {{ phase === 'won' ? t('result.daring') : t('result.scoreLost') }}
-          span.font-black.text-yellow-200(class="text-xl sm:text-2xl") {{ phase === 'won' ? lastDaringTotal.toLocaleString() : (chunksDeposited * 100).toLocaleString() }}
-        //- Coins
+          span.font-black.text-yellow-200(class="text-xl sm:text-2xl") {{ lastDaringTotal.toLocaleString() }}
         div.flex.flex-col.items-center.gap-1(ref="rewardCoinRef")
           div.flex.items-center.gap-3
             IconCoin(class="w-8 h-8 text-yellow-300")
             span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ runTotalCoins }}
-        //- 2× rewarded
         button.cursor-pointer.transition-transform.flex.items-center.justify-center.gap-2(
           v-if="twoXAvailable"
           class="rounded-xl bg-gradient-to-b from-[#ffcd00] to-[#f7a000] border-2 border-[#0a3a1c] text-white font-black uppercase game-text hover:scale-[103%] active:scale-95 disabled:opacity-50 px-5 py-2"

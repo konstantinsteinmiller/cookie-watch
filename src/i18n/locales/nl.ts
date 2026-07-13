@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': 'Houd een kant vast om te sluipen — dubbeltik om te sprinten, laat los om je dood te houden',
+    'keysToMove': 'Houd ◀ ▶ vast om te sluipen — dubbeltik om te sprinten, laat los om je dood te houden',
+    'freeze': 'Verstijf! Niet bewegen!',
+    'run': 'Rennen! Niet stoppen!'
+  },
   'tutorial': {
-    'breakCookieTouch': 'Tik om de koek te breken',
-    'breakCookieDesktop': 'Klik om de koek te breken',
-    'playDeadTouch': 'Veeg omlaag om dood te spelen',
-    'playDeadDesktop': 'Druk op ↓ om dood te spelen',
+    'harvestTouch': 'Houd rechts vast bij het koekje om te oogsten',
+    'harvestDesktop': 'Houd ▶ vast bij het koekje om te oogsten',
+    'playDeadTouch': 'Laat los om je dood te houden',
+    'playDeadDesktop': 'Laat los om je dood te houden',
     'avoidCat': 'Laat de kat je niet pakken'
+  },
+  'cat': {
+    'asleep': 'Slaapt',
+    'awake': 'Wakker'
+  },
+  'frenzy': {
+    'title': 'Vreetbui!',
+    'sub': 'Verslind het hele dessert voordat de tijd om is!',
+    'tap': 'Tik! Tik! Tik!',
+    'click': 'Klik! Klik! Klik!',
+    'chokeHint': 'Verdeel je krachten — te snel en je stikt!',
+    'choking': 'Verslikt!'
+  },
+  'review': {
+    'title': 'Leveloverzicht',
+    'delivery': 'Levering',
+    'greedy': 'Hebzuchtbonus',
+    'closeCall': 'Op het nippertje',
+    'insaneEscape': 'Waanzinnige ontsnapping',
+    'daringTotal': 'Durftotaal',
+    'pass': 'Etappe gehaald',
+    'perfectClear': 'Perfect gehaald!',
+    'goldClear': 'Gouden finish!',
+    'toFrenzy': 'Eet het koekje!'
   },
   'ads': {
     'watch': 'Bekijk', 'revive': 'Herleven', 'secondChance': 'Tweede kans', 'doubleCoins': '2× munten', 'plusCoins': '+{n} munten'
@@ -42,11 +72,7 @@ export default {
   'crazyGamesOnly': 'Dit spel is alleen beschikbaar op',
   'startTouch': 'Tik om te starten',
   'startDesktop': 'Klik om te starten',
-  'startSubhint': 'Rol omhoog — verander van richting om de gaten en obstakels te ontwijken!',
-  'hints': {
-    'tapToTurn': 'Tik om van richting te veranderen',
-    'clickToTurn': 'Klik / Spatie om van richting te veranderen'
-  },
+  'startSubhint': 'Houd een kant ingedrukt om te sluipen, laat los om je dood te houden. Houd richting het koekje om stukken te oogsten, draag ze naar huis — en VERSTIJF als de kat wakker wordt!',
   'powerups': {
     'invuln': 'Onkwetsbaar',
     'magnet': 'Muntmagneet',
@@ -69,7 +95,10 @@ export default {
     'winReward': 'incl. +{n} levelbonus',
     'double': 'Munten verdubbelen',
     'firstRunDouble': '2× — eerste run van vandaag!',
-   'almost': 'Bijna! Nog {n} tegels te gaan.', 'retry': 'Opnieuw', },
+    'almost': 'Bijna! Nog {n} tegels te gaan.', 'retry': 'Opnieuw',
+    'caught': 'De laser van de kat heeft je verdampt!',
+    'timeout': 'Tijd om — je hebt niet genoeg gestolen!'
+  },
   'upgrades': {
     'title': 'Upgrades',
     'subtitle': 'Geef munten uit om permanent sterker te worden.',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': 'Ontwijkt automatisch één dodelijke tegel, daarna opladen (10s; −0,5s per niveau).',
       'deathMagnet': 'Bij overlijden grijp je elke munt binnen 4 tegels — bewaar wat je anders zou verliezen.',
       'autoCollect': 'Verzamel altijd munten van nabijgelegen tegels — een permanente magneet van 1 tegel.',
-      'rollingBoulder': 'Rol ongedeerd dwars door kistobstakels heen.'
+      'rollingBoulder': 'Rol ongedeerd dwars door kistobstakels heen.',
+      'calmNerves': 'Langere respijttijd om te verstijven nadat de kat wakker wordt (+0,05 s per niveau).',
+      'lightPaws': 'De kat slaapt langer — langer groen licht (+4% per niveau).',
+      'extraTime': 'Begin elke keuken met meer tijd (+5 s per niveau).',
+      'deepHole': 'Je buit verdwijnt sneller in het muizenhol (+12% per niveau).',
+      'sixthSense': 'De laser laadt langer op, dus je hebt langer om te ontwijken (+0,15 s per niveau).'
     },
     'secondChance': {
       'name': 'Tweede Kans',

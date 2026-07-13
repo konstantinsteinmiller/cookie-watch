@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': '按住一侧潜行 — 双击冲刺，松手装死',
+    'keysToMove': '按住 ◀ ▶ 潜行 — 双击冲刺，松手装死',
+    'freeze': '别动！僵住！',
+    'run': '快跑！别停下！'
+  },
   'tutorial': {
-    'breakCookieTouch': '点击敲碎饼干',
-    'breakCookieDesktop': '单击敲碎饼干',
-    'playDeadTouch': '向下滑动装死',
-    'playDeadDesktop': '按 ↓ 装死',
-    'avoidCat': '别让猫抓到你'
+    'harvestTouch': '在饼干旁按住右侧来采集',
+    'harvestDesktop': '在饼干旁按住 ▶ 来采集',
+    'playDeadTouch': '松手即装死',
+    'playDeadDesktop': '松手即装死',
+    'avoidCat': '别被猫抓到'
+  },
+  'cat': {
+    'asleep': '睡着',
+    'awake': '醒着'
+  },
+  'frenzy': {
+    'title': '狂吃盛宴！',
+    'sub': '在时间耗尽前吞下整个甜点！',
+    'tap': '快点！快点！快点！',
+    'click': '快点！快点！快点！',
+    'chokeHint': '掌握节奏——按得太快会噎住！',
+    'choking': '噎住了！'
+  },
+  'review': {
+    'title': '关卡结算',
+    'delivery': '送达',
+    'greedy': '贪婪奖励',
+    'closeCall': '死里逃生',
+    'insaneEscape': '疯狂逃脱',
+    'daringTotal': '大胆总分',
+    'pass': '通关',
+    'perfectClear': '完美通关！',
+    'goldClear': '黄金通关！',
+    'toFrenzy': '吃掉饼干！'
   },
   'ads': {
     'watch': '观看', 'revive': '复活', 'secondChance': '第二次机会', 'doubleCoins': '2× 金币', 'plusCoins': '+{n} 金币'
@@ -42,11 +72,7 @@ export default {
   'crazyGamesOnly': '本游戏仅在以下平台提供',
   'startTouch': '点击开始',
   'startDesktop': '点击开始',
-  'startSubhint': '向上滚动——改变方向以躲避缺口和障碍！',
-  'hints': {
-    'tapToTurn': '点击改变方向',
-    'clickToTurn': '点击 / 空格改变方向'
-  },
+  'startSubhint': '按住一侧潜行，松手即装死。按住朝向饼干的方向来采集碎块，把它们运回家——猫醒来时立刻僵住！',
   'powerups': {
     'invuln': '无敌',
     'magnet': '金币磁铁',
@@ -69,7 +95,10 @@ export default {
     'winReward': '含 +{n} 关卡奖励',
     'double': '双倍金币',
     'firstRunDouble': '2倍 — 今日首局！',
-   'almost': '差一点！还需 {n} 格即可通关。', 'retry': '重试', },
+    'almost': '差一点！还需 {n} 格即可通关。', 'retry': '重试',
+    'caught': '猫的激光把你汽化了！',
+    'timeout': '时间到——你偷得不够多！'
+  },
   'upgrades': {
     'title': '升级',
     'subtitle': '花费金币永久强化。',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': '自动闪避一个致命格子，然后充能（10秒，每级−0.5秒）。',
       'deathMagnet': '死亡时，吸取 4 格以内的所有金币 — 把本会失去的金币收入囊中。',
       'autoCollect': '始终收集附近格子的金币 — 永久的 1 格金币磁铁。',
-      'rollingBoulder': '直接碾过木箱障碍，毫发无伤。'
+      'rollingBoulder': '直接碾过木箱障碍，毫发无伤。',
+      'calmNerves': '猫醒来后有更长的僵住宽限时间（每级 +0.05 秒）。',
+      'lightPaws': '猫睡得更久——绿灯更长（每级 +4%）。',
+      'extraTime': '每个厨房开局时间更多（每级 +5 秒）。',
+      'deepHole': '你的战利品落入鼠洞更快（每级 +12%）。',
+      'sixthSense': '激光蓄力更久，你有更长时间闪避（每级 +0.15 秒）。'
     },
     'secondChance': {
       'name': '第二次机会',

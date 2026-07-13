@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': 'Mantén un lado para colarte — doble toque para esprintar, suelta para hacerte el muerto',
+    'keysToMove': 'Mantén ◀ ▶ para colarte — doble pulsación para esprintar, suelta para hacerte el muerto',
+    'freeze': '¡Congélate! ¡No te muevas!',
+    'run': '¡Corre! ¡No pares!'
+  },
   'tutorial': {
-    'breakCookieTouch': 'Toca para romper la galleta',
-    'breakCookieDesktop': 'Haz clic para romper la galleta',
-    'playDeadTouch': 'Desliza hacia abajo para hacerte el muerto',
-    'playDeadDesktop': 'Pulsa ↓ para hacerte el muerto',
+    'harvestTouch': 'Mantén la derecha junto a la galleta para cosechar',
+    'harvestDesktop': 'Mantén ▶ junto a la galleta para cosechar',
+    'playDeadTouch': 'Suelta para hacerte el muerto',
+    'playDeadDesktop': 'Suelta para hacerte el muerto',
     'avoidCat': 'No dejes que el gato te atrape'
+  },
+  'cat': {
+    'asleep': 'Dormido',
+    'awake': 'Despierto'
+  },
+  'frenzy': {
+    'title': '¡Frenesí devorador!',
+    'sub': '¡Devora todo el postre antes de que acabe el tiempo!',
+    'tap': '¡Toca! ¡Toca! ¡Toca!',
+    'click': '¡Clic! ¡Clic! ¡Clic!',
+    'chokeHint': 'Dosifícate: ¡si aporreas demasiado rápido te atragantarás!',
+    'choking': '¡Atragantado!'
+  },
+  'review': {
+    'title': 'Resumen del nivel',
+    'delivery': 'Entrega',
+    'greedy': 'Bono de codicia',
+    'closeCall': 'Por los pelos',
+    'insaneEscape': 'Huida demencial',
+    'daringTotal': 'Total de audacia',
+    'pass': 'Etapa superada',
+    'perfectClear': '¡Perfecto!',
+    'goldClear': '¡Oro puro!',
+    'toFrenzy': '¡Cómete la galleta!'
   },
   'ads': {
     'watch': 'Ver', 'revive': 'Revivir', 'secondChance': 'Segunda oportunidad', 'doubleCoins': '2× monedas', 'plusCoins': '+{n} monedas'
@@ -42,11 +72,7 @@ export default {
   'crazyGamesOnly': 'Este juego solo está disponible en',
   'startTouch': 'Toca para empezar',
   'startDesktop': 'Haz clic para empezar',
-  'startSubhint': '¡Rueda hacia arriba: cambia de dirección para esquivar huecos y obstáculos!',
-  'hints': {
-    'tapToTurn': 'Toca para cambiar de dirección',
-    'clickToTurn': 'Clic / Espacio para cambiar de dirección'
-  },
+  'startSubhint': 'Mantén pulsado un lado para colarte, suelta para hacerte el muerto. Mantén hacia la galleta para cosechar trozos, llévalos a casa — ¡y CONGÉLATE cuando el gato despierte!',
   'powerups': {
     'invuln': 'Invencible',
     'magnet': 'Imán de monedas',
@@ -69,7 +95,10 @@ export default {
     'winReward': 'incl. +{n} de bonus de nivel',
     'double': 'Duplicar monedas',
     'firstRunDouble': '2× — ¡primera partida de hoy!',
-   'almost': '¡Casi! Faltan {n} casillas.', 'retry': 'Reintentar', },
+    'almost': '¡Casi! Faltan {n} casillas.', 'retry': 'Reintentar',
+    'caught': '¡El láser del gato te ha vaporizado!',
+    'timeout': 'Se acabó el tiempo: ¡no robaste lo suficiente!'
+  },
   'upgrades': {
     'title': 'Mejoras',
     'subtitle': 'Gasta monedas para potenciarte permanentemente.',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': 'Esquiva auto una casilla mortal, luego recarga (10s; −0,5s por nivel).',
       'deathMagnet': 'Al morir, recoge todas las monedas en un radio de 4 casillas — guarda lo que habrías perdido.',
       'autoCollect': 'Recoge siempre las monedas de las casillas cercanas — un imán de monedas permanente de 1 casilla.',
-      'rollingBoulder': 'Atraviesa las cajas sin sufrir daño.'
+      'rollingBoulder': 'Atraviesa las cajas sin sufrir daño.',
+      'calmNerves': 'Más margen para congelarte tras despertar el gato (+0,05 s por nivel).',
+      'lightPaws': 'El gato duerme más — luz verde más larga (+4 % por nivel).',
+      'extraTime': 'Empieza cada cocina con más tiempo (+5 s por nivel).',
+      'deepHole': 'Tu botín cae más rápido por la ratonera (+12 % por nivel).',
+      'sixthSense': 'El láser tarda más en cargarse, así que tienes más tiempo para esquivar (+0,15 s por nivel).'
     },
     'secondChance': {
       'name': 'Segunda Oportunidad',

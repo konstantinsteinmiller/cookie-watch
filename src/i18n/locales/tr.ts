@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': 'Sinsice ilerlemek için bir tarafı basılı tut — atılmak için çift dokun, bırakınca ölü taklidi yaparsın',
+    'keysToMove': 'Sinsice ilerlemek için ◀ ▶ basılı tut — atılmak için çift bas, bırakınca ölü taklidi yaparsın',
+    'freeze': 'Donup kal! Kıpırdama!',
+    'run': 'Koş! Durma!'
+  },
   'tutorial': {
-    'breakCookieTouch': 'Kurabiyeyi kırmak için dokun',
-    'breakCookieDesktop': 'Kurabiyeyi kırmak için tıkla',
-    'playDeadTouch': 'Ölü taklidi yapmak için aşağı kaydır',
-    'playDeadDesktop': 'Ölü taklidi yapmak için ↓ tuşuna bas',
-    'avoidCat': 'Kedinin seni yakalamasına izin verme'
+    'harvestTouch': 'Toplamak için kurabiyenin yanında sağa basılı tut',
+    'harvestDesktop': 'Toplamak için kurabiyenin yanında ▶ basılı tut',
+    'playDeadTouch': 'Ölü taklidi için bırak',
+    'playDeadDesktop': 'Ölü taklidi için bırak',
+    'avoidCat': 'Kediye yakalanma'
+  },
+  'cat': {
+    'asleep': 'Uyuyor',
+    'awake': 'Uyanık'
+  },
+  'frenzy': {
+    'title': 'Yeme Çılgınlığı!',
+    'sub': 'Süre bitmeden tatlının tamamını mideye indir!',
+    'tap': 'Dokun! Dokun! Dokun!',
+    'click': 'Tıkla! Tıkla! Tıkla!',
+    'chokeHint': 'Temponu ayarla — çok hızlı basarsan boğulursun!',
+    'choking': 'Boğuldu!'
+  },
+  'review': {
+    'title': 'Bölüm Özeti',
+    'delivery': 'Teslimat',
+    'greedy': 'Açgözlülük Bonusu',
+    'closeCall': 'Kıl Payı',
+    'insaneEscape': 'Çılgın Kaçış',
+    'daringTotal': 'Cesaret Toplamı',
+    'pass': 'Etap Tamam',
+    'perfectClear': 'Kusursuz!',
+    'goldClear': 'Altın Bitiriş!',
+    'toFrenzy': 'Kurabiyeyi Ye!'
   },
   'ads': {
     'watch': 'İzle', 'revive': 'Canlandır', 'secondChance': 'İkinci Şans', 'doubleCoins': '2× Para', 'plusCoins': '+{n} para'
@@ -42,11 +72,7 @@ export default {
   'crazyGamesOnly': 'Bu oyun yalnızca şurada mevcuttur:',
   'startTouch': 'Başlamak için dokun',
   'startDesktop': 'Başlamak için tıkla',
-  'startSubhint': 'Yukarı yuvarlan — boşlukları ve engelleri atlatmak için yön değiştir!',
-  'hints': {
-    'tapToTurn': 'Yön değiştirmek için dokun',
-    'clickToTurn': 'Yön değiştirmek için tıkla / Boşluk'
-  },
+  'startSubhint': 'Sinsice ilerlemek için bir tarafı basılı tut, ölü taklidi yapmak için bırak. Parça toplamak için kurabiyeye doğru basılı tut, eve taşı — ve kedi uyanınca DONUP KAL!',
   'powerups': {
     'invuln': 'Yenilmez',
     'magnet': 'Para Mıknatısı',
@@ -69,7 +95,10 @@ export default {
     'winReward': '+{n} aşama bonusu dahil',
     'double': 'Paraları ikiye katla',
     'firstRunDouble': '2× — bugünün ilk koşusu!',
-   'almost': 'Az kaldı! {n} kare daha.', 'retry': 'Tekrar', },
+    'almost': 'Az kaldı! {n} kare daha.', 'retry': 'Tekrar',
+    'caught': 'Kedinin lazeri seni buharlaştırdı!',
+    'timeout': 'Süre doldu — yeterince çalamadın!'
+  },
   'upgrades': {
     'title': 'Geliştirmeler',
     'subtitle': 'Kalıcı güçlenmek için para harca.',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': 'Ölümcül bir kareden otomatik kaç, sonra dolar (10sn; −0,5sn / seviye).',
       'deathMagnet': 'Öldüğünde 4 kare içindeki tüm madeni paraları topla — kaybedeceğin parayı kasaya at.',
       'autoCollect': 'Yakındaki karelerdeki paraları her zaman topla — kalıcı 1 karelik mıknatıs.',
-      'rollingBoulder': 'Kutu engellerin içinden zarar görmeden yuvarlan.'
+      'rollingBoulder': 'Kutu engellerin içinden zarar görmeden yuvarlan.',
+      'calmNerves': 'Kedi uyandıktan sonra donup kalmak için daha uzun süre (seviye başına +0,05 sn).',
+      'lightPaws': 'Kedi daha uzun uyur — yeşil ışık uzar (seviye başına +%4).',
+      'extraTime': 'Her mutfağa daha fazla süreyle başla (seviye başına +5 sn).',
+      'deepHole': 'Ganimetin fare deliğine daha hızlı iner (seviye başına +%12).',
+      'sixthSense': 'Lazerin dolması uzar, kaçmak için daha çok vaktin olur (seviye başına +0,15 sn).'
     },
     'secondChance': {
       'name': 'İkinci Şans',

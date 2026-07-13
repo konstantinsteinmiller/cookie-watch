@@ -47,16 +47,18 @@ export interface UpgradeDef {
 // Each value is read by the engine (`useCookieGame`) via `upgradedValue(id)`
 // = base + level * perLevel, applied at the start of every kitchen.
 export const UPGRADES: ReadonlyArray<UpgradeDef> = [
-  // Calm Nerves: scales DOWN the cat's awareness gain from your noise. Stored
-  // as the per-level reduction fraction (0.06 → −6% per level, capped engine-side).
-  { id: 'calmNerves', maxLevel: 5, base: 0, perLevel: 0.06, costBase: 80, costGrowth: 1.4, unlockStage: 1 },
-  // Light Paws: a misstep adds less alert (−0.5 per level off the +4 base).
-  { id: 'lightPaws', maxLevel: 5, base: 0, perLevel: 0.5, costBase: 100, costGrowth: 1.4, unlockStage: 1 },
-  // Night Owl: extra seconds on the cat-nap timer (+5s per level).
+  // Rev 5 retunes these onto the new Cat: the awareness meter is gone, so every
+  // upgrade now buys a concrete slice of the Green/Red light loop instead.
+  //
+  // Calm Nerves: lengthens the 0.3s detection grace buffer (+0.05s per level).
+  { id: 'calmNerves', maxLevel: 5, base: 0, perLevel: 0.05, costBase: 80, costGrowth: 1.4, unlockStage: 1 },
+  // Light Paws: the Cat sleeps longer — a longer Green Light (+4% per level).
+  { id: 'lightPaws', maxLevel: 5, base: 0, perLevel: 0.04, costBase: 100, costGrowth: 1.4, unlockStage: 1 },
+  // Night Owl: extra seconds on the level clock (+5s per level).
   { id: 'extraTime', maxLevel: 5, base: 0, perLevel: 5, costBase: 120, costGrowth: 1.45, unlockStage: 2 },
-  // Cozy Burrow: faster awareness cool-down while hiding in the hole (+2/s per level).
-  { id: 'deepHole', maxLevel: 5, base: 0, perLevel: 2, costBase: 110, costGrowth: 1.4, unlockStage: 2 },
-  // Sixth Sense: a longer pounce wind-up gives you more time to flee (+0.15s/level).
+  // Cozy Burrow: the Mouse Door swallows your haul faster (+12% deposit rate/level).
+  { id: 'deepHole', maxLevel: 5, base: 0, perLevel: 0.12, costBase: 110, costGrowth: 1.4, unlockStage: 2 },
+  // Sixth Sense: a longer laser charge-up = a longer window to dodge (+0.15s/level).
   { id: 'sixthSense', maxLevel: 5, base: 0, perLevel: 0.15, costBase: 140, costGrowth: 1.45, unlockStage: 3 }
 ] as const
 

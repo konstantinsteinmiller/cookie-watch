@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': 'Tieni un lato per sgattaiolare — doppio tocco per scattare, rilascia per fingerti morto',
+    'keysToMove': 'Tieni ◀ ▶ per sgattaiolare — doppia pressione per scattare, rilascia per fingerti morto',
+    'freeze': 'Fermo! Non muoverti!',
+    'run': 'Corri! Non fermarti!'
+  },
   'tutorial': {
-    'breakCookieTouch': 'Tocca per rompere il biscotto',
-    'breakCookieDesktop': 'Clicca per rompere il biscotto',
-    'playDeadTouch': 'Scorri in giù per fingerti morto',
-    'playDeadDesktop': 'Premi ↓ per fingerti morto',
+    'harvestTouch': 'Tieni premuto a destra sul biscotto per raccogliere',
+    'harvestDesktop': 'Tieni premuto ▶ sul biscotto per raccogliere',
+    'playDeadTouch': 'Rilascia per fingerti morto',
+    'playDeadDesktop': 'Rilascia per fingerti morto',
     'avoidCat': 'Non farti prendere dal gatto'
+  },
+  'cat': {
+    'asleep': 'Dorme',
+    'awake': 'Sveglio'
+  },
+  'frenzy': {
+    'title': 'Abbuffata!',
+    'sub': 'Divora tutto il dolce prima che scada il tempo!',
+    'tap': 'Tocca! Tocca! Tocca!',
+    'click': 'Clicca! Clicca! Clicca!',
+    'chokeHint': 'Dosa il ritmo — troppo veloce e ti strozzi!',
+    'choking': 'Strozzato!'
+  },
+  'review': {
+    'title': 'Resoconto livello',
+    'delivery': 'Consegna',
+    'greedy': 'Bonus Ingordigia',
+    'closeCall': 'Scampato per un pelo',
+    'insaneEscape': 'Fuga folle',
+    'daringTotal': 'Totale audacia',
+    'pass': 'Tappa superata',
+    'perfectClear': 'Perfetto!',
+    'goldClear': 'Finale d’oro!',
+    'toFrenzy': 'Mangia il biscotto!'
   },
   'ads': {
     'watch': 'Guarda', 'revive': 'Rinasci', 'secondChance': 'Seconda chance', 'doubleCoins': '2× monete', 'plusCoins': '+{n} monete'
@@ -43,10 +73,6 @@ export default {
   'startTouch': 'Tocca per iniziare',
   'startDesktop': 'Clicca per iniziare',
   'startSubhint': "Rotola verso l'alto — cambia direzione per schivare vuoti e ostacoli!",
-  'hints': {
-    'tapToTurn': 'Tocca per cambiare direzione',
-    'clickToTurn': 'Clicca / Spazio per cambiare direzione'
-  },
   'powerups': {
     'invuln': 'Invincibile',
     'magnet': 'Calamita Monete',
@@ -69,7 +95,10 @@ export default {
     'winReward': 'incl. +{n} bonus livello',
     'double': 'Raddoppia monete',
     'firstRunDouble': '2× — prima corsa di oggi!',
-   'almost': 'Quasi! Ancora {n} caselle.', 'retry': 'Riprova', },
+    'almost': 'Quasi! Ancora {n} caselle.', 'retry': 'Riprova',
+    'caught': 'Il laser del gatto ti ha vaporizzato!',
+    'timeout': 'Tempo scaduto — non hai rubato abbastanza!'
+  },
   'upgrades': {
     'title': 'Potenziamenti',
     'subtitle': 'Spendi monete per potenziarti in modo permanente.',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': 'Schiva auto una casella mortale, poi ricarica (10s; −0,5s per livello).',
       'deathMagnet': 'Alla morte, raccogli tutte le monete entro 4 caselle — incassa ciò che avresti perso.',
       'autoCollect': 'Raccoglie sempre le monete dalle caselle vicine — una calamita monete permanente da 1 casella.',
-      'rollingBoulder': 'Rotola dritto attraverso le casse, senza danni.'
+      'rollingBoulder': 'Rotola dritto attraverso le casse, senza danni.',
+      'calmNerves': 'Più tempo di grazia per congelarti dopo il risveglio del gatto (+0,05 s per livello).',
+      'lightPaws': 'Il gatto dorme più a lungo — luce verde più lunga (+4% per livello).',
+      'extraTime': 'Inizia ogni cucina con più tempo (+5 s per livello).',
+      'deepHole': 'Il bottino scivola nella tana più in fretta (+12% per livello).',
+      'sixthSense': 'Il laser impiega più tempo a caricarsi, quindi hai più tempo per schivare (+0,15 s per livello).'
     },
     'secondChance': {
       'name': 'Seconda Chance',

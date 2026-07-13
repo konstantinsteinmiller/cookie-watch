@@ -30,7 +30,7 @@ describe('upgrade economy', () => {
     useEpicConfig().addCoins(10_000)
     expect(api.buyUpgrade('calmNerves')).toBe(true)
     expect(prog.levelOf('calmNerves')).toBe(1)
-    expect(prog.upgradedValue('calmNerves')).toBeCloseTo(0.06)
+    expect(prog.upgradedValue('calmNerves')).toBeCloseTo(0.05)
   })
 
   it('refuses a purchase the player cannot afford', async () => {

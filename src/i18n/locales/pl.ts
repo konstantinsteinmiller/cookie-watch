@@ -1,10 +1,40 @@
 export default {
+  'hints': {
+    'tapToMove': 'Przytrzymaj stronę, by się skradać — dwuklik, by ruszyć sprintem, puść, by udawać martwego',
+    'keysToMove': 'Przytrzymaj ◀ ▶, by się skradać — dwukrotne wciśnięcie to sprint, puść, by udawać martwego',
+    'freeze': 'Zamrzyj! Nie ruszaj się!',
+    'run': 'Biegnij! Nie zatrzymuj się!'
+  },
   'tutorial': {
-    'breakCookieTouch': 'Dotknij, aby rozbić ciastko',
-    'breakCookieDesktop': 'Kliknij, aby rozbić ciastko',
-    'playDeadTouch': 'Przesuń w dół, aby udawać martwego',
-    'playDeadDesktop': 'Naciśnij ↓, aby udawać martwego',
+    'harvestTouch': 'Przytrzymaj w prawo przy ciastku, by zbierać',
+    'harvestDesktop': 'Przytrzymaj ▶ przy ciastku, by zbierać',
+    'playDeadTouch': 'Puść, by udawać martwego',
+    'playDeadDesktop': 'Puść, by udawać martwego',
     'avoidCat': 'Nie daj się złapać kotu'
+  },
+  'cat': {
+    'asleep': 'Śpi',
+    'awake': 'Czuwa'
+  },
+  'frenzy': {
+    'title': 'Szał jedzenia!',
+    'sub': 'Pożryj cały deser, zanim skończy się czas!',
+    'tap': 'Stukaj! Stukaj! Stukaj!',
+    'click': 'Klikaj! Klikaj! Klikaj!',
+    'chokeHint': 'Rozłóż siły — za szybko i się zakrztusisz!',
+    'choking': 'Zakrztuszenie!'
+  },
+  'review': {
+    'title': 'Podsumowanie poziomu',
+    'delivery': 'Dostawa',
+    'greedy': 'Premia za chciwość',
+    'closeCall': 'O włos',
+    'insaneEscape': 'Szalona ucieczka',
+    'daringTotal': 'Suma śmiałości',
+    'pass': 'Etap zaliczony',
+    'perfectClear': 'Perfekcyjnie!',
+    'goldClear': 'Złote ukończenie!',
+    'toFrenzy': 'Zjedz ciastko!'
   },
   'ads': {
     'watch': 'Obejrzyj', 'revive': 'Wskrześ', 'secondChance': 'Druga szansa', 'doubleCoins': '2× monety', 'plusCoins': '+{n} monet'
@@ -42,11 +72,7 @@ export default {
   'crazyGamesOnly': 'Ta gra jest dostępna tylko na',
   'startTouch': 'Dotknij, aby rozpocząć',
   'startDesktop': 'Kliknij, aby rozpocząć',
-  'startSubhint': 'Tocz się w górę — zmieniaj kierunek, aby omijać luki i przeszkody!',
-  'hints': {
-    'tapToTurn': 'Dotknij, aby zmienić kierunek',
-    'clickToTurn': 'Kliknij / Spacja, aby zmienić kierunek'
-  },
+  'startSubhint': 'Przytrzymaj jedną stronę, by się skradać, puść, by udawać martwego. Przytrzymaj w stronę ciastka, by zbierać kawałki, zanieś je do domu — i ZAMRZYJ, gdy kot się obudzi!',
   'powerups': {
     'invuln': 'Niezniszczalny',
     'magnet': 'Magnes na Monety',
@@ -69,7 +95,10 @@ export default {
     'winReward': 'w tym +{n} bonus za etap',
     'double': 'Podwój monety',
     'firstRunDouble': '2× — pierwszy bieg dzisiaj!',
-   'almost': 'Prawie! Jeszcze {n} pól.', 'retry': 'Ponów', },
+    'almost': 'Prawie! Jeszcze {n} pól.', 'retry': 'Ponów',
+    'caught': 'Laser kota cię wyparował!',
+    'timeout': 'Koniec czasu — ukradłeś za mało!'
+  },
   'upgrades': {
     'title': 'Ulepszenia',
     'subtitle': 'Wydawaj monety, aby trwale się wzmocnić.',
@@ -96,7 +125,12 @@ export default {
       'dodgeApprentice': 'Automatyczny unik przed jednym śmiertelnym polem, potem ładowanie (10s; −0,5s na poziom).',
       'deathMagnet': 'Po śmierci zgarniasz każdą monetę w promieniu 4 pól — zachowaj to, co inaczej byś stracił.',
       'autoCollect': 'Zawsze zbieraj monety z pobliskich pól — stały magnes o zasięgu 1 pola.',
-      'rollingBoulder': 'Tocz się prosto przez skrzynie bez szwanku.'
+      'rollingBoulder': 'Tocz się prosto przez skrzynie bez szwanku.',
+      'calmNerves': 'Dłuższy czas na zamrożenie po przebudzeniu kota (+0,05 s na poziom).',
+      'lightPaws': 'Kot śpi dłużej — dłuższe zielone światło (+4% na poziom).',
+      'extraTime': 'Zaczynaj każdą kuchnię z większą ilością czasu (+5 s na poziom).',
+      'deepHole': 'Twój łup szybciej wpada do mysiej nory (+12% na poziom).',
+      'sixthSense': 'Laser ładuje się dłużej, więc masz więcej czasu na unik (+0,15 s na poziom).'
     },
     'secondChance': {
       'name': 'Druga Szansa',
