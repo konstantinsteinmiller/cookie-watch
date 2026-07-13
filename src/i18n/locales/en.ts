@@ -14,9 +14,13 @@ export default {
   'rewards': 'REWARDS',
   'tip': 'Tip',
   'crazyGamesOnly': 'This game is only available on',
-  'startTouch': 'Tap to Start',
-  'startDesktop': 'Click to Start',
+  'startAnnounce': 'Start!',
   'startSubhint': 'Hold a side to sneak, let go to play dead. Hold into the cookie to harvest chunks, carry them home — and FREEZE when the cat wakes!',
+  'paused': {
+    'title': 'Paused',
+    'resume': 'Resume',
+    'pause': 'Pause'
+  },
   'hints': {
     'tapToMove': 'Hold a side to sneak — double-tap to dash, let go to play dead',
     'keysToMove': 'Hold ◀ ▶ to sneak — double-tap to dash, let go to play dead',

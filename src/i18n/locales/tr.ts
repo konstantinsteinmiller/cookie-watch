@@ -70,8 +70,12 @@ export default {
   'rewards': 'ÖDÜLLER',
   'tip': 'İpucu',
   'crazyGamesOnly': 'Bu oyun yalnızca şurada mevcuttur:',
-  'startTouch': 'Başlamak için dokun',
-  'startDesktop': 'Başlamak için tıkla',
+  'startAnnounce': 'Başla!',
+  'paused': {
+    'title': 'Duraklatıldı',
+    'resume': 'Devam et',
+    'pause': 'Duraklat'
+  },
   'startSubhint': 'Sinsice ilerlemek için bir tarafı basılı tut, ölü taklidi yapmak için bırak. Parça toplamak için kurabiyeye doğru basılı tut, eve taşı — ve kedi uyanınca DONUP KAL!',
   'powerups': {
     'invuln': 'Yenilmez',

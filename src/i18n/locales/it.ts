@@ -70,8 +70,12 @@ export default {
   'rewards': 'RICOMPENSE',
   'tip': 'Consiglio',
   'crazyGamesOnly': 'Questo gioco è disponibile solo su',
-  'startTouch': 'Tocca per iniziare',
-  'startDesktop': 'Clicca per iniziare',
+  'startAnnounce': 'Via!',
+  'paused': {
+    'title': 'In pausa',
+    'resume': 'Riprendi',
+    'pause': 'Pausa'
+  },
   'startSubhint': "Rotola verso l'alto — cambia direzione per schivare vuoti e ostacoli!",
   'powerups': {
     'invuln': 'Invincibile',

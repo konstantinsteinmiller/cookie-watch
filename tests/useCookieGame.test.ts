@@ -10,17 +10,27 @@ import useEpicProgress from '@/use/useEpicProgress'
 const TICK = 50
 const progress = useEpicProgress()
 
-/** Re-seed the engine on a specific level. */
-const startLevel = (level: number): void => {
-  progress.stage.value = level
-  G.resetForStage()
-  G.begin()
-}
-
 /** Advance the clock while holding nothing (the Mouse plays dead — always safe). */
 const idle = (ms: number): void => {
   G.releaseAllDirs()
   for (let t = 0; t < ms; t += TICK) G.step(TICK)
+}
+
+/**
+ * Re-seed the engine on a specific level and play dead through the Cat's opening
+ * Red Light (Rev 6 §C: the cycle now OPENS on a watch, not a nap).
+ *
+ * Waiting it out leaves every test where it used to start — on the first frame of
+ * the Cat's first full Green Light — so they still assert their mechanic inside a
+ * clean, cat-free window instead of racing an eye-laser.
+ */
+const startLevel = (level: number): void => {
+  progress.stage.value = level
+  G.resetForStage()
+  G.begin()
+  expect(G.catStateRef.value).toBe('awake')            // the opening Red Light
+  for (let t = 0; t < 10_000 && G.catStateRef.value !== 'asleep'; t += TICK) idle(TICK)
+  expect(G.catStateRef.value).toBe('asleep')
 }
 
 /**
@@ -87,7 +97,7 @@ beforeEach(() => {
 describe('the World 1 level table (§J)', () => {
   it('matches the authored levels 1–6', () => {
     expect(levelConfig(1)).toMatchObject({
-      time: 45,
+      time: 60,
       red: 2300,
       chunks: 3,
       pass: 1,
@@ -96,10 +106,12 @@ describe('the World 1 level table (§J)', () => {
       mini: true
     })
     expect(levelConfig(1).green).toEqual([3000])
-    expect(levelConfig(2)).toMatchObject({ time: 45, chunks: 6, pass: 2, perfect: 6, platinum: 8, gold: true })
-    expect(levelConfig(3)).toMatchObject({ time: 45, red: 1800 })
+    expect(levelConfig(2)).toMatchObject({ time: 60, chunks: 6, pass: 2, perfect: 6, platinum: 8, gold: true })
+    expect(levelConfig(3)).toMatchObject({ time: 60, red: 1800 })
     expect(levelConfig(3).green).toEqual([2000])
-    expect(levelConfig(4)).toMatchObject({ time: 30, red: 3000 })
+    expect(levelConfig(4)).toMatchObject({ time: 60, red: 3000 })
+    // Rev 6: the whole opening run (1–4) gets the full 60s clock.
+    expect([1, 2, 3, 4].every((n) => levelConfig(n).time === 60)).toBe(true)
     expect(levelConfig(5).green).toEqual([4300])
     // Level 6, "The Trickster": a 1.2s fakeout or a 3.2s long window, at random.
     expect(levelConfig(6).green).toEqual([1200, 3200])
@@ -120,12 +132,29 @@ describe('the World 1 level table (§J)', () => {
 })
 
 describe('inventory weight (§B)', () => {
-  it('maps filled slots → the speed penalty table', () => {
-    expect(G.carrySpeedFactor(0)).toBe(1)      // 0%  — full speed
-    expect(G.carrySpeedFactor(1)).toBe(0.85)   // 15% slower
-    expect(G.carrySpeedFactor(2)).toBe(0.7)    // 30% slower
-    expect(G.carrySpeedFactor(3)).toBe(0.5)    // 50% slower — max load
-    expect(G.carrySpeedFactor(1.5)).toBe(0.7)  // a lone Gold Piece
+  it('maps filled slots → the Rev 6 speed penalty table', () => {
+    expect(G.carrySpeedFactor(0)).toBe(1)       // 0%  — full speed
+    expect(G.carrySpeedFactor(1)).toBe(0.85)    // 15% slower
+    expect(G.carrySpeedFactor(2)).toBe(0.75)    // 25% slower
+    expect(G.carrySpeedFactor(3)).toBe(0.55)    // 45% slower — max load
+    expect(G.carrySpeedFactor(1.5)).toBe(0.75)  // a lone Gold Piece
+  })
+})
+
+describe('the opening Red Light (Rev 6 §C)', () => {
+  it('begins the run on a watch, not a nap — and the doorway makes it free', () => {
+    progress.stage.value = 1
+    G.resetForStage()
+    G.begin()
+    expect(G.catStateRef.value).toBe('awake')
+    expect(G.mustFreeze.value).toBe(true)
+
+    // The Mouse opens the level tucked in its door, so the watch costs nothing:
+    // sit it out and the Cat naps without ever having charged.
+    idle(levelConfig(1).red + 500)
+    expect(G.catStateRef.value).toBe('asleep')
+    expect(G.phase.value).toBe('playing')
+    expect(G.game.charging).toBe(false)
   })
 })
 
@@ -276,7 +305,7 @@ describe('depositing, ratings and scoring (§E/§H)', () => {
 
   it('fails the level when the clock beats the minimum requirement', () => {
     startLevel(1)
-    idle(50_000)                                   // never leave the door
+    idle(levelConfig(1).time * 1000 + 2000)        // never leave the door
     expect(G.phase.value).toBe('dead')
     expect(G.lossCause.value).toBe('timeout')
     expect(G.reviewData.value.stars).toBe(0)

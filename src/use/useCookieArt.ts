@@ -20,6 +20,7 @@
  */
 import {
   game, phase, clock, GOLD_FLASH_MS, FRENZY_ZIPS, FRENZY_STAGES, MAX_SLOTS,
+  HARVEST_MS, HARVEST_SHAKE_MS,
   type FxEvent, type ItemKind
 } from '@/use/useCookieGame'
 import { prependBaseUrl } from '@/utils/function'
@@ -533,6 +534,23 @@ const drawChunkGlyph = (ctx: CanvasRenderingContext2D, x: number, y: number, r: 
   ctx.fill()
 }
 
+/**
+ * §D (Rev 6): while a harvest is running the dessert JOLTS on a 0.75s beat — the
+ * Mouse is physically wrenching a chunk off it. Each jolt is a quick rattle that
+ * rings out over ~0.26s, so the node punches twice per 1.5s chunk and sits still
+ * in between; a continuous wobble would read as decoration rather than effort.
+ *
+ * The beat is measured off the harvest ring itself (`harvestT` × its duration),
+ * not the wall clock, so the first jolt always lands ON the moment the player
+ * commits to the hold — and the rhythm restarts cleanly with every new chunk.
+ */
+const harvestJolt = (): number => {
+  if (game.harvestT <= 0) return 0
+  const sinceJolt = (game.harvestT * HARVEST_MS) % HARVEST_SHAKE_MS
+  const ring = Math.max(0, 1 - sinceJolt / 260)
+  return Math.sin(sinceJolt / 17) * unit * 0.1 * ring * ring
+}
+
 const drawPlate = (ctx: CanvasRenderingContext2D, now: number): void => {
   const x = goalX, y = floorY
   ctx.fillStyle = 'rgba(0,0,0,0.3)'
@@ -549,10 +567,12 @@ const drawPlate = (ctx: CanvasRenderingContext2D, now: number): void => {
 
   // Level 1's Mini Cookie Dessert is a smaller node than the big multi-chunk ones.
   const r = unit * (game.dessertTotal <= 3 ? 1.2 : 1.7)
-  drawDessert(ctx, x, y - unit * 1.5, r, game.dessertTotal, game.chunksInDessert)
+  const jolt = harvestJolt()
+  drawDessert(ctx, x + jolt, y - unit * 1.5, r, game.dessertTotal, game.chunksInDessert)
 
-  // Dessert stripped bare → the Gold Nugget it was hiding sits on the plate.
-  if (game.goldExposed) drawNugget(ctx, x, y - unit * 0.7, unit * 0.6, now)
+  // Dessert stripped bare → the Gold Nugget it was hiding sits on the plate. It
+  // takes the same jolt: prising it loose runs the very same harvest ring.
+  if (game.goldExposed) drawNugget(ctx, x + jolt, y - unit * 0.7, unit * 0.6, now)
 }
 
 // ─── Ground items (dropped / blasted loose) ──────────────────────────────────

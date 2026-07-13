@@ -70,8 +70,12 @@ export default {
   'rewards': 'NAGRODY',
   'tip': 'Wskazówka',
   'crazyGamesOnly': 'Ta gra jest dostępna tylko na',
-  'startTouch': 'Dotknij, aby rozpocząć',
-  'startDesktop': 'Kliknij, aby rozpocząć',
+  'startAnnounce': 'Start!',
+  'paused': {
+    'title': 'Wstrzymano',
+    'resume': 'Wznów',
+    'pause': 'Pauza'
+  },
   'startSubhint': 'Przytrzymaj jedną stronę, by się skradać, puść, by udawać martwego. Przytrzymaj w stronę ciastka, by zbierać kawałki, zanieś je do domu — i ZAMRZYJ, gdy kot się obudzi!',
   'powerups': {
     'invuln': 'Niezniszczalny',

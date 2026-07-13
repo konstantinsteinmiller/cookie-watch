@@ -70,8 +70,12 @@ export default {
   'rewards': 'RÉCOMPENSES',
   'tip': 'Astuce',
   'crazyGamesOnly': 'Ce jeu est uniquement disponible sur',
-  'startTouch': 'Touchez pour commencer',
-  'startDesktop': 'Cliquez pour commencer',
+  'startAnnounce': 'Partez !',
+  'paused': {
+    'title': 'En pause',
+    'resume': 'Reprendre',
+    'pause': 'Pause'
+  },
   'startSubhint': 'Maintiens un côté pour te faufiler, relâche pour faire le mort. Maintiens vers le cookie pour récolter des morceaux, ramène-les chez toi — et FIGE-TOI quand le chat se réveille !',
   'powerups': {
     'invuln': 'Invincible',

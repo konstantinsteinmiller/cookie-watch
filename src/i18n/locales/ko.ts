@@ -70,8 +70,12 @@ export default {
   'rewards': '보상',
   'tip': '팁',
   'crazyGamesOnly': '이 게임은 다음에서만 플레이할 수 있습니다',
-  'startTouch': '탭하여 시작',
-  'startDesktop': '클릭하여 시작',
+  'startAnnounce': '시작!',
+  'paused': {
+    'title': '일시정지',
+    'resume': '계속하기',
+    'pause': '일시정지'
+  },
   'startSubhint': '한쪽을 누른 채로 몰래 이동하고, 손을 떼면 죽은 척합니다. 쿠키 쪽으로 누르고 있으면 조각을 채집하고, 집으로 옮기세요 — 고양이가 깨면 얼어붙으세요!',
   'powerups': {
     'invuln': '무적',

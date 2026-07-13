@@ -70,8 +70,12 @@ export default {
   'rewards': '報酬',
   'tip': 'ヒント',
   'crazyGamesOnly': 'このゲームは次でのみプレイできます',
-  'startTouch': 'タップしてスタート',
-  'startDesktop': 'クリックしてスタート',
+  'startAnnounce': 'スタート！',
+  'paused': {
+    'title': '一時停止中',
+    'resume': '再開',
+    'pause': '一時停止'
+  },
   'startSubhint': '片側を押し続けて忍び歩き、離すと死んだふり。クッキーの方向に押し続けて欠片を採取し、家まで運ぼう——ネコが起きたら動くな！',
   'powerups': {
     'invuln': '無敵',

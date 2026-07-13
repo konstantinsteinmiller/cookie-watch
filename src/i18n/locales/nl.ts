@@ -70,8 +70,12 @@ export default {
   'rewards': 'BELONINGEN',
   'tip': 'Tip',
   'crazyGamesOnly': 'Dit spel is alleen beschikbaar op',
-  'startTouch': 'Tik om te starten',
-  'startDesktop': 'Klik om te starten',
+  'startAnnounce': 'Start!',
+  'paused': {
+    'title': 'Gepauzeerd',
+    'resume': 'Hervatten',
+    'pause': 'Pauze'
+  },
   'startSubhint': 'Houd een kant ingedrukt om te sluipen, laat los om je dood te houden. Houd richting het koekje om stukken te oogsten, draag ze naar huis — en VERSTIJF als de kat wakker wordt!',
   'powerups': {
     'invuln': 'Onkwetsbaar',

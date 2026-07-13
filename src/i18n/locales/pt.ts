@@ -70,8 +70,12 @@ export default {
   'rewards': 'RECOMPENSAS',
   'tip': 'Dica',
   'crazyGamesOnly': 'Este jogo só está disponível em',
-  'startTouch': 'Toque para começar',
-  'startDesktop': 'Clique para começar',
+  'startAnnounce': 'Já!',
+  'paused': {
+    'title': 'Em pausa',
+    'resume': 'Retomar',
+    'pause': 'Pausar'
+  },
   'startSubhint': 'Segure um lado para se esgueirar, solte para se fingir de morto. Segure em direção ao biscoito para colher pedaços, leve-os para casa — e CONGELE quando o gato acordar!',
   'powerups': {
     'invuln': 'Invencível',

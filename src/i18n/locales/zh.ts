@@ -70,8 +70,12 @@ export default {
   'rewards': '奖励',
   'tip': '提示',
   'crazyGamesOnly': '本游戏仅在以下平台提供',
-  'startTouch': '点击开始',
-  'startDesktop': '点击开始',
+  'startAnnounce': '开始！',
+  'paused': {
+    'title': '已暂停',
+    'resume': '继续',
+    'pause': '暂停'
+  },
   'startSubhint': '按住一侧潜行，松手即装死。按住朝向饼干的方向来采集碎块，把它们运回家——猫醒来时立刻僵住！',
   'powerups': {
     'invuln': '无敌',

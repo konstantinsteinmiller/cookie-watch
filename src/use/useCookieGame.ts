@@ -88,9 +88,11 @@ const SLOT_COST: Record<ItemKind, number> = { chunk: 1, burnt: 1, goldPiece: 1.5
 /** Chunk value each item contributes toward the Stage Clear requirement. */
 const CLEAR_VALUE: Record<ItemKind, number> = { chunk: 1, burnt: 0.5, goldPiece: 1, gold: 2 }
 
-/** Movement penalty by slots filled (§B table): 0% / 15% / 30% / 50% slower. */
+/** Movement penalty by slots filled (§B table): 0% / 15% / 25% / 45% slower.
+ *  Rev 6 lightens the top of the table — a full sack should be a real cost, but
+ *  not so heavy that hauling three chunks stops being worth the trip. */
 export const carrySpeedFactor = (slots: number): number =>
-  slots <= 0 ? 1 : slots <= 1 ? 0.85 : slots <= 2 ? 0.7 : 0.5
+  slots <= 0 ? 1 : slots <= 1 ? 0.85 : slots <= 2 ? 0.75 : 0.55
 
 /** Base delivery score for a haul of N chunks (§H): 100 / 300 / 600. */
 const CHUNK_TIER = [0, 100, 300, 600]
@@ -101,17 +103,18 @@ const INSANE_ESCAPE_POINTS = 3000
 /** §H: depositing at max capacity multiplies the delivery value. */
 const GREEDY_MULT = 1.2
 
-// ─── Movement tuning (Rev 5 §A) ──────────────────────────────────────────────
-// Rev 5 slows the Mouse's top speed right down and gives the DASH the old top
-// speed back, so a double-tap is a genuine burst — and a noisy commitment.
+// ─── Movement tuning (Rev 6 §A) ──────────────────────────────────────────────
+// Rev 5 slowed the sneak to 0.34 and handed the old top speed to the DASH. Rev 6
+// walks that back: the Mouse felt sluggish, so BOTH speeds go up by +0.3. The
+// dash keeps its full +0.20 margin over the sneak, so a double-tap is still a
+// genuine burst — and still a noisy commitment — rather than the only way to
+// cover ground.
 //
-// The sneak can't go much below this: a Perfect clear on level 2 is two full
-// round trips inside 45s, and only the Green Light is usable (3.0s of every
-// 5.3s cycle). At 0.30 that costs ~46s of wall clock — unwinnable on foot. At
-// 0.34 it just fits, and the dash turns it into a comfortable ~33s. Skilled
-// dashing should be REWARDED here, not required.
-const TOP_SPEED = 0.34           // sneak: the new, slower cruise
-const DASH_SPEED = 0.54          // dash: Rev 4's top speed, per the timeline
+// The sneak is now fast enough to clear a level on foot inside a Green Light
+// rhythm alone (a Perfect on level 2 — two full round trips — costs ~24s of the
+// 60s clock), which is the point: skilled dashing is REWARDED, never required.
+const TOP_SPEED = 0.64           // sneak: the Rev 6 cruise
+const DASH_SPEED = 0.84          // dash: the burst, +0.20 over the sneak
 const ACCEL_TIME = 0.35          // s of holding to reach cruise
 const DASH_ACCEL_TIME = 0.12     // a dash snaps up to speed
 /** Second press of the same direction within this window = a dash. */
@@ -124,13 +127,19 @@ const PROXIMITY_R = 0.16         // how close to the dessert the node UI appears
 
 // ─── Harvesting (Rev 5 §D) ───────────────────────────────────────────────────
 /** Hold the direction INTO the dessert; a green ring runs this long per chunk. */
-const HARVEST_MS = 1500
+export const HARVEST_MS = 1500
+/** Rev 6: the dessert jolts on this beat while it's being harvested — two visible
+ *  shakes per chunk, so the node reads as "something is being torn off me". The
+ *  renderer owns the animation; this is the tempo it runs on. */
+export const HARVEST_SHAKE_MS = 750
 /** Each item transfers into the Mouse Door in exactly 0.1s (§E). */
 const DEPOSIT_MS = 100
 
 // ─── Cat-Eyes & threat loop (Rev 5 §C) ───────────────────────────────────────
-/** The Cat shakes for this long at the tail of its nap — the wake-up telegraph. */
-const SHAKE_MS = 450
+/** The Cat shakes for this long at the tail of its nap — the wake-up telegraph.
+ *  Rev 6 stretches it to a full second: with the Mouse now moving at Rev 6 speed,
+ *  0.45s of warning wasn't enough time to stop and drop everything. */
+const SHAKE_MS = 1000
 /** Detection leniency: release everything within this of the wake or you're seen. */
 const GRACE_MS = 300
 /** The eye-laser's charge-up. This IS the dodge window — freezing here is fatal. */
@@ -938,13 +947,18 @@ export const resetForStage = (): void => {
   syncHud()
 }
 
-/** Begin the live run (first tap/click of the level). */
+/** Begin the live run.
+ *
+ *  Rev 6: the cycle OPENS on a Red Light. The Mouse starts tucked in its door
+ *  playing dead, so the opening watch costs nothing — it just hands the player
+ *  the Cat's rhythm before they take a single step, instead of dropping them
+ *  into a nap whose clock they never saw start. */
 export const begin = (): void => {
   if (phase.value !== 'idle') return
   phase.value = 'playing'
   elapsedMs = 0
   progress.recordGamePlayed()
-  enterAsleep()
+  enterAwake()
   syncHud()
 }
 

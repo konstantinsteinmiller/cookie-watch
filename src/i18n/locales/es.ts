@@ -70,8 +70,12 @@ export default {
   'rewards': 'RECOMPENSAS',
   'tip': 'Consejo',
   'crazyGamesOnly': 'Este juego solo está disponible en',
-  'startTouch': 'Toca para empezar',
-  'startDesktop': 'Haz clic para empezar',
+  'startAnnounce': '¡Ya!',
+  'paused': {
+    'title': 'En pausa',
+    'resume': 'Reanudar',
+    'pause': 'Pausa'
+  },
   'startSubhint': 'Mantén pulsado un lado para colarte, suelta para hacerte el muerto. Mantén hacia la galleta para cosechar trozos, llévalos a casa — ¡y CONGÉLATE cuando el gato despierte!',
   'powerups': {
     'invuln': 'Invencible',

@@ -70,8 +70,12 @@ export default {
   'rewards': 'PHẦN THƯỞNG',
   'tip': 'Mẹo',
   'crazyGamesOnly': 'Trò chơi này chỉ có trên',
-  'startTouch': 'Chạm để bắt đầu',
-  'startDesktop': 'Nhấp để bắt đầu',
+  'startAnnounce': 'Bắt đầu!',
+  'paused': {
+    'title': 'Tạm dừng',
+    'resume': 'Tiếp tục',
+    'pause': 'Tạm dừng'
+  },
   'startSubhint': 'Giữ một bên để rón rén, thả ra để giả chết. Giữ hướng về phía bánh quy để thu hoạch mảnh vụn, mang chúng về nhà — và ĐỨNG YÊN khi mèo thức dậy!',
   'powerups': {
     'invuln': 'Bất tử',

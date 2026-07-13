@@ -11,7 +11,7 @@ import useAchievements from '@/use/useAchievements'
 import { getState, setState } from '@/use/useEpicState'
 import { DAILY_BONUS_DAY_KEY, UPGRADE_SPOTLIGHT_KEY } from '@/keys'
 import useBattlePass from '@/use/useBattlePass'
-import { useMusic } from '@/use/useSound'
+import { useMusic, forceStopMusic } from '@/use/useSound'
 import useSounds from '@/use/useSound'
 import { useScreenshake } from '@/use/useScreenshake'
 import { isGamePaused, acquireAppPause } from '@/use/useGamePause'
@@ -109,27 +109,76 @@ const loop = (tNow: number): void => {
 //   Harvest   hold the direction INTO the dessert (right); the engine runs the
 //             1.5s green ring for as long as it's held
 //   Drop      Spacebar, or swipe up
+const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
+// Rev 6 removes Click-to-Start: a level announces "START!" and goes. The first-
+// start interstitial still runs FIRST (an ad may never open over live gameplay),
+// and the announcement holds the screen for ANNOUNCE_MS while the engine is still
+// idle, so the player reads it before the Cat's opening Red Light begins.
+const ANNOUNCE_MS = 900
+const announcing = ref(false)
 let startingRun = false
 const startRun = async (): Promise<void> => {
   if (startingRun || phase.value !== 'idle') return
   startingRun = true
   try {
     await playFirstStartInterstitial()
+    if (phase.value !== 'idle') return
+    announcing.value = true
+    playSound('level-up', 0.05)
+    await wait(ANNOUNCE_MS)
     if (phase.value === 'idle') begin()
   } finally {
+    announcing.value = false
     startingRun = false
   }
 }
 
+// ─── Pause / lobby (Rev 6) ──────────────────────────────────────────────────
+// With the level auto-starting there is no idle screen left to reach the meta
+// layer from, so the run itself carries the door to it: pausing freezes the
+// engine (via the same app-pause gate the ads and modals use) and brings the
+// upgrades / missions / dailies / options cluster back on screen.
+const paused = ref(false)
+let releaseRunPause: (() => void) | null = null
+
+const pauseRun = (): void => {
+  if (paused.value || phase.value !== 'playing') return
+  paused.value = true
+  // HARD-stop the music BEFORE taking the pause. A fade would leave the element
+  // still playing when the pause gate suspends audio, and the gate's resume
+  // force-plays everything it paused — which would put the music back on air
+  // over a Red Light. Stopping it synchronously means the gate never adopts it.
+  forceStopMusic()
+  releaseRunPause = acquireAppPause()
+  releaseAllDirs()
+  stopGameplay()   // CrazyGames: a blocking menu is not gameplay
+}
+const resumeRun = (): void => {
+  if (!paused.value) return
+  paused.value = false
+  releaseRunPause?.()
+  releaseRunPause = null
+  if (phase.value !== 'playing') return
+  startGameplay()
+  // …and the music comes back only if the Cat is still napping (§C).
+  if (!mustFreeze.value) startBattleMusic()
+}
+
 const modalUp = computed(() =>
   showResult.value || showSecondChance.value || showReview.value || showInstructions.value)
+/** Nothing in the run may take input while it's paused or a card is up. */
+const inputLocked = computed(() => paused.value || modalUp.value)
+/** The meta cluster: between runs, and while the run is paused — but never under
+ *  the "START!" card, which would flash it on screen for a beat on every level. */
+const metaOpen = computed(() => paused.value || (!announcing.value &&
+  phase.value !== 'playing' && phase.value !== 'frenzy' && phase.value !== 'dead'))
 
 const onCanvasDown = (e: PointerEvent): void => {
   try { window.focus() } catch { /* cross-origin parent — ignore */ }
   e.preventDefault()
-  if (modalUp.value) return
-  if (phase.value === 'idle') void startRun()
-  else if (phase.value === 'frenzy') frenzyTap()
+  if (inputLocked.value) return
+  if (phase.value === 'frenzy') frenzyTap()
 }
 
 // Invisible left/right touch zones (mobile + desktop mouse). Holding a screen
@@ -146,7 +195,7 @@ const onZonePress = (dir: Dir, e: PointerEvent): void => {
     window.focus()
   } catch { /* cross-origin parent — ignore */
   }
-  if (phase.value !== 'playing') return
+  if (phase.value !== 'playing' || inputLocked.value) return
   zoneStartY[dir] = e.clientY
   zoneSwiped[dir] = false
   pressDir(dir)
@@ -178,13 +227,19 @@ const onKeyDown = (e: KeyboardEvent): void => {
     e.preventDefault()
     if (downCodes.has(e.code)) return
     downCodes.add(e.code)
-    if (phase.value === 'playing') pressDir(mapped)
+    if (phase.value === 'playing' && !inputLocked.value) pressDir(mapped)
   } else if (e.code === 'Space' || e.code === 'Enter') {
     e.preventDefault()
-    if (modalUp.value) return
+    if (inputLocked.value) return
     if (phase.value === 'playing') dropItem()
     else if (phase.value === 'frenzy') frenzyTap()
-    else if (phase.value === 'idle') void startRun()
+  } else if (e.code === 'Escape' || e.code === 'KeyP') {
+    // Any open card owns Escape — resuming out from under Options/Upgrades would
+    // put the Mouse back on the floor while the player is still reading a menu.
+    if (modalUp.value || showOptions.value || showUpgrades.value) return
+    e.preventDefault()
+    if (paused.value) resumeRun()
+    else pauseRun()
   }
 }
 const onKeyUp = (e: KeyboardEvent): void => {
@@ -210,9 +265,8 @@ const isAdInFlight = ref(false)
 const firstRunBonusActive = ref(false)
 
 const showHint = computed(() => phase.value === 'playing' && progress.stage.value < 3 &&
-  !mustFreeze.value && !mustRun.value)
+  !paused.value && !mustFreeze.value && !mustRun.value)
 const hintText = computed(() => isMobilePortrait.value ? t('hints.tapToMove') : t('hints.keysToMove'))
-const startText = computed(() => isMobilePortrait.value ? t('startTouch') : t('startDesktop'))
 
 // ─── First-level instruction card ────────────────────────────────────────────
 // A one-shot tutorial shown the first time the player reaches the dessert in the
@@ -297,8 +351,10 @@ const finishRun = (cleared: boolean): void => {
 const upgradeSpotlightSeen = ref(getState<boolean>(UPGRADE_SPOTLIGHT_KEY, false) === true)
 const canAffordAnyUpgrade = computed(() =>
   UPGRADES.some((u) => progress.isUnlocked(u.id) && progress.canBuy(u.id)))
+// Rev 6: the idle screen is gone, so the spotlight rides the meta cluster —
+// it lights up wherever the upgrade button is actually reachable.
 const showUpgradeSpotlight = computed(() =>
-  !upgradeSpotlightSeen.value && phase.value === 'idle' && !showUpgrades.value && canAffordAnyUpgrade.value)
+  !upgradeSpotlightSeen.value && metaOpen.value && !showUpgrades.value && canAffordAnyUpgrade.value)
 const openUpgrades = (): void => {
   showUpgrades.value = true
   if (!upgradeSpotlightSeen.value) { upgradeSpotlightSeen.value = true; setState(UPGRADE_SPOTLIGHT_KEY, true) }
@@ -309,8 +365,6 @@ const coinBadgeEl = computed<HTMLElement | null>(() => coinBadgeRef.value?.rootE
 const rewardCoinRef = ref<HTMLElement | null>(null)
 
 // ─── Death / review / frenzy / win flow ──────────────────────────────────────
-const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
-
 const onDeath = async (): Promise<void> => {
   stopBattleMusic()
   playSound('lose', 0.07)
@@ -418,7 +472,7 @@ const onResultContinue = (): void => {
   showResult.value = false
   consumeFirstRunBonus()
   resetForStage()
-  startBattleMusic()
+  void startRun()
 }
 
 const retry = (): void => {
@@ -428,8 +482,7 @@ const retry = (): void => {
   showReview.value = false
   outOfLives.value = confirmLoss()
   resetForStage()
-  begin()
-  startBattleMusic()
+  void startRun()
 }
 
 const fireCoinExplosion = (sourceEl: HTMLElement): void => {
@@ -463,7 +516,11 @@ const reviewRows = computed(() => {
 watch(phase, (p, prev) => {
   if (p !== 'playing') onBlur()               // leaving play drops any held input
   if (p !== 'playing') dismissInstructions()  // never leave the card (+ its pause) hanging
-  if (p === 'playing' && prev !== 'playing') startBattleMusic()
+  if (p !== 'playing') resumeRun()            // …and never leave the run's pause held
+  // Rev 6 opens the Cat's cycle on a Red Light, so a run BEGINS in silence — the
+  // §C rule that music plays only under the Green Light now decides the very
+  // first note too. The `mustFreeze` watcher below brings it in on the first nap.
+  if (p === 'playing' && prev !== 'playing' && !mustFreeze.value) startBattleMusic()
   if (p === 'dead' && prev === 'playing') void onDeath()
   if (p === 'review' && prev === 'playing') onReview()
   if (p === 'won') void onWin()
@@ -476,13 +533,14 @@ watch(phase, (p, prev) => {
 watch(mustFreeze, (freeze) => {
   if (phase.value !== 'playing') return
   if (freeze) stopBattleMusic()
-  else startBattleMusic()
+  else if (!paused.value) startBattleMusic()
 })
 
 // ─── Lifecycle ──────────────────────────────────────────────────────────────
 let tickTimer = 0
 onMounted(() => {
   resetForStage()
+  void startRun()          // Rev 6: no Click-to-Start — announce "START!" and go
   nextTick(resize)
   window.addEventListener('resize', resize)
   window.addEventListener('orientationchange', resize)
@@ -501,6 +559,7 @@ onUnmounted(() => {
   window.removeEventListener('blur', onBlur)
   clearInterval(tickTimer)
   dismissInstructions()
+  resumeRun()              // drop the pause lock with the view
   stopBattleMusic()
 })
 </script>
@@ -527,13 +586,29 @@ onUnmounted(() => {
         }"
       )
         StageBadge(:stage-id="progress.stage.value" :cleared="depositedValue" :target="perfectTarget")
-        div.flex.flex-col.items-end.gap-4(v-show="phase !== 'playing' && phase !== 'dead' && phase !== 'frenzy'")
-          CoinBadge(ref="coinBadgeRef")
-          TreasureChest(:target-el="coinBadgeEl")
+        div.flex.flex-col.items-end.gap-2
+          div.flex.flex-col.items-end.gap-4(v-show="phase !== 'playing' && phase !== 'dead' && phase !== 'frenzy'")
+            CoinBadge(ref="coinBadgeRef")
+            TreasureChest(:target-el="coinBadgeEl")
+          //- Rev 6: the run auto-starts, so THIS is the way back to the meta layer.
+          //- It must out-stack the invisible left/right control zones (z-[1]) that
+          //- cover the whole screen during play — they are painted after the top
+          //- bar and would otherwise swallow every tap aimed at this button.
+          button.cursor-pointer.transition-transform.pointer-events-auto.relative(
+            v-show="phase === 'playing' && !paused"
+            class="z-50 hover:scale-[103%] active:scale-90 scale-80 sm:scale-100"
+            :aria-label="t('paused.pause')"
+            @click="pauseRun"
+          )
+            div.relative
+              div.absolute.inset-0.translate-y-1.rounded-lg(class="bg-[#0c5a2e]")
+              div.relative.rounded-lg.border-2.flex.items-center.justify-center.p-2(class="bg-gradient-to-b from-[#5cd16d] to-[#2e9a4a] border-[#0a3a1c]")
+                svg(viewBox="0 0 24 24" class="w-6 h-6 text-white" fill="currentColor")
+                  path(d="M7 5 h3.5 v14 H7 Z M13.5 5 H17 v14 h-3.5 Z")
 
       //- Invisible left / right control zones (mobile touch + desktop mouse):
       //- hold a half to sneak, double-tap+hold to dash, swipe up to panic-drop.
-      div.absolute.inset-0.flex(class="z-[1]" v-show="phase === 'playing'")
+      div.absolute.inset-0.flex(class="z-[1]" v-show="phase === 'playing' && !paused")
         div.h-full.pointer-events-auto.touch-none(
           class="w-1/2"
           @pointerdown="onZonePress('left', $event)"
@@ -573,10 +648,24 @@ onUnmounted(() => {
           span.text-base {{ '🍪' }}
           span.game-text.font-black.text-white.leading-none(class="text-sm sm:text-base") {{ depositedValue }}/{{ perfectTarget }}
 
-      //- Tap-to-start prompt
-      div.absolute.inset-0.flex.items-center.justify-center.z-10(v-if="phase === 'idle'" class="pointer-events-none")
-        div.text-center.px-6
-          div.text-white.font-black.uppercase.tracking-wider.animate-pulse.game-text(class="text-3xl sm:text-5xl mb-2") {{ startText }}
+      //- "START!" — the level announces itself and begins on its own (Rev 6).
+      Transition(name="fade")
+        div.absolute.inset-0.flex.items-center.justify-center.z-10(v-if="announcing" class="pointer-events-none")
+          div.text-center.px-6
+            div.text-yellow-300.font-black.uppercase.tracking-wider.game-text.announce(class="text-5xl sm:text-7xl") {{ t('startAnnounce') }}
+
+      //- Paused: the run is frozen and the meta cluster is back on screen.
+      Transition(name="fade")
+        div.absolute.inset-0.flex.items-center.justify-center(
+          v-if="paused"
+          class="z-[40] bg-black/60 pointer-events-none"
+        )
+          div.flex.flex-col.items-center.gap-4
+            div.text-white.font-black.uppercase.tracking-wider.game-text(class="text-3xl sm:text-5xl") {{ t('paused.title') }}
+            button.cursor-pointer.transition-transform.pointer-events-auto(
+              class="px-6 py-2 rounded-lg bg-gradient-to-b from-[#5cd16d] to-[#2e9a4a] border-2 border-[#0a3a1c] text-white font-black uppercase game-text hover:scale-[103%] active:scale-95"
+              @click="resumeRun"
+            ) {{ t('paused.resume') }}
 
       //- Control hint — first kitchens only
       Transition(name="fade")
@@ -593,10 +682,10 @@ onUnmounted(() => {
           left: 'calc(0.5rem + env(safe-area-inset-left, 0px))'\
         }"
       )
-        LivesBadge(v-if="phase === 'playing' || phase === 'dead'" :value="lives")
-        FMuteButton(v-show="phase !== 'playing' && phase !== 'frenzy' && phase !== 'dead'")
+        LivesBadge(v-if="(phase === 'playing' && !paused) || phase === 'dead'" :value="lives")
+        FMuteButton(v-show="metaOpen")
         button.cursor-pointer.transition-transform.mb-1(
-          v-show="phase !== 'playing' && phase !== 'frenzy' && phase !== 'dead'"
+          v-show="metaOpen"
           class="hover:scale-[103%] active:scale-90 scale-80 sm:scale-100"
           @click="showOptions = true"
         )
@@ -605,16 +694,16 @@ onUnmounted(() => {
             div.relative.rounded-lg.border-2.flex.items-center.justify-center.p-2(class="bg-gradient-to-b from-[#5cd16d] to-[#2e9a4a] border-[#0a3a1c]")
               svg(viewBox="0 0 24 24" class="w-7 h-7 text-white" fill="currentColor")
                 path(d="M12 4 a1 1 0 0 1 1 1 v1.6 a6 6 0 0 1 1.8 0.7 l1.1 -1.1 a1 1 0 0 1 1.4 1.4 l -1.1 1.1 a6 6 0 0 1 0.7 1.8 H18 a1 1 0 1 1 0 2 h-1.6 a6 6 0 0 1 -0.7 1.8 l1.1 1.1 a1 1 0 0 1 -1.4 1.4 l-1.1 -1.1 a6 6 0 0 1 -1.8 0.7 V18 a1 1 0 1 1 -2 0 v -1.6 a6 6 0 0 1 -1.8 -0.7 l-1.1 1.1 a1 1 0 0 1 -1.4 -1.4 l1.1 -1.1 a6 6 0 0 1 -0.7 -1.8 H6 a1 1 0 1 1 0 -2 h1.6 a6 6 0 0 1 0.7 -1.8 L7.2 7.6 a1 1 0 0 1 1.4 -1.4 l1.1 1.1 a6 6 0 0 1 1.8 -0.7 V5 a1 1 0 0 1 1 -1 Z M12 9 a3 3 0 1 0 0 6 a3 3 0 0 0 0 -6 Z")
-        div.flex.items-end(v-show="phase !== 'playing' && phase !== 'frenzy' && phase !== 'dead'" class="gap-0 sm:gap-2")
+        div.flex.items-end(v-show="metaOpen" class="gap-0 sm:gap-2")
           DailyRewards(@coins-awarded="fireCoinExplosion")
           MissionsModal(@coins-awarded="fireCoinExplosion")
           AchievementsButton(@coins-awarded="fireCoinExplosion")
           AdRewardButton(@coins-awarded="fireCoinExplosion")
           BattlePass(@coins-awarded="fireCoinExplosion")
 
-      //- Bottom-right: upgrades (hidden during a run)
+      //- Bottom-right: upgrades (hidden during a run, back while it's paused)
       div.absolute.pointer-events-auto.z-50.flex.flex-col.items-end.gap-2(
-        v-show="phase !== 'playing' && phase !== 'frenzy'"
+        v-show="paused || (phase !== 'playing' && phase !== 'frenzy')"
         :style="{\
           bottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',\
           right: 'calc(0.5rem + env(safe-area-inset-right, 0px))'\
@@ -795,6 +884,16 @@ onUnmounted(() => {
 </template>
 
 <style scoped lang="sass">
+.announce
+  animation: announce-in 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) both
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.45)
+@keyframes announce-in
+  from
+    opacity: 0
+    transform: scale(0.4)
+  to
+    opacity: 1
+    transform: scale(1)
 .review-row
   animation: review-in 0.4s ease both
 @keyframes review-in

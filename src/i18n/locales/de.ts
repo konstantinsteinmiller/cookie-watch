@@ -70,8 +70,12 @@ export default {
   'rewards': 'BELOHNUNGEN',
   'tip': 'Tipp',
   'crazyGamesOnly': 'Dieses Spiel ist nur verfügbar auf',
-  'startTouch': 'Zum Starten tippen',
-  'startDesktop': 'Zum Starten klicken',
+  'startAnnounce': 'Los!',
+  'paused': {
+    'title': 'Pausiert',
+    'resume': 'Fortsetzen',
+    'pause': 'Pause'
+  },
   'startSubhint': 'Halte eine Seite gedrückt, um zu schleichen, lass los, um dich totzustellen. Halte in Richtung Keks, um Stücke zu ernten, trage sie nach Hause — und ERSTARRE, wenn die Katze aufwacht!',
   'powerups': {
     'invuln': 'Unverwundbar',

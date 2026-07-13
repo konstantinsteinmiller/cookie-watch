@@ -6,6 +6,9 @@
  * Light). Levels 1–6 are hand-authored from the design doc; past level 6 the
  * table extrapolates so the campaign keeps going.
  *
+ * Rev 6 gives the whole opening run (levels 1–4) the full 60s clock — the Cat's
+ * rhythm, not the stopwatch, is what should be teaching the player here.
+ *
  * `pass` / `perfect` / `platinum` are CHUNK VALUES (not item counts) — a burnt
  * chunk is worth 0.5, a Gold Piece 1, a Gold Nugget 2 — so level 2's "8" is the
  * six cookie chunks plus the nugget's 2.
@@ -34,13 +37,13 @@ export interface LevelConfig {
 
 const WORLD_1: readonly LevelConfig[] = [
   // 1 — Tutorial. A mini cookie: three chunks, one trip, no nugget.
-  { time: 45, green: [3000], red: 2300, chunks: 3, pass: 1, perfect: 3, platinum: 0, gold: false, mini: true },
+  { time: 60, green: [3000], red: 2300, chunks: 3, pass: 1, perfect: 3, platinum: 0, gold: false, mini: true },
   // 2 — Bigger Cookie & Gold Nugget.
-  { time: 45, green: [3000], red: 2300, chunks: 6, pass: 2, perfect: 6, platinum: 8, gold: true, mini: false },
+  { time: 60, green: [3000], red: 2300, chunks: 6, pass: 2, perfect: 6, platinum: 8, gold: true, mini: false },
   // 3 — Speed Test.
-  { time: 45, green: [2000], red: 1800, chunks: 6, pass: 3, perfect: 6, platinum: 8, gold: true, mini: false },
+  { time: 60, green: [2000], red: 1800, chunks: 6, pass: 3, perfect: 6, platinum: 8, gold: true, mini: false },
   // 4 — Balanced Rhythm.
-  { time: 30, green: [3000], red: 3000, chunks: 6, pass: 3, perfect: 6, platinum: 8, gold: true, mini: false },
+  { time: 60, green: [3000], red: 3000, chunks: 6, pass: 3, perfect: 6, platinum: 8, gold: true, mini: false },
   // 5 — Suspense (then the Eating Frenzy).
   { time: 45, green: [4300], red: 2300, chunks: 6, pass: 3, perfect: 6, platinum: 8, gold: true, mini: false },
   // 6 — The Trickster: a 1.2s fakeout nap or a 3.2s long window, at random.

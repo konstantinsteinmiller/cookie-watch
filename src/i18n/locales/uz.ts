@@ -70,8 +70,12 @@ export default {
   'rewards': 'MUKOFOTLAR',
   'tip': 'Maslahat',
   'crazyGamesOnly': "Bu oʻyin faqat shu yerda mavjud",
-  'startTouch': 'Boshlash uchun bosing',
-  'startDesktop': 'Boshlash uchun bosing',
+  'startAnnounce': 'Boshlash!',
+  'paused': {
+    'title': 'Pauza',
+    'resume': 'Davom etish',
+    'pause': 'Pauza'
+  },
   'startSubhint': "Yuqoriga yumalang — boʻshliqlar va toʻsiqlardan qochish uchun yoʻnalishni oʻzgartiring!",
   'powerups': {
     'invuln': 'Yengilmas',

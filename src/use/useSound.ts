@@ -8,6 +8,9 @@ import { ref, onMounted, watch, onUnmounted } from 'vue'
 
 // We keep the audio instance outside the hook so it's a true Singleton
 const bgMusic = ref<HTMLAudioElement | null>(null)
+/** Which track file `bgMusic` currently has loaded — lets a resume skip the
+ *  `.src` reassignment that would rewind the loop. Singleton, like the element. */
+let loadedTrack = ''
 const isLoaded = ref(false)
 const isPlaying = ref(false)
 // Tracks whether music is *meant* to be playing right now (i.e. a battle is
@@ -66,12 +69,34 @@ export const setMusicIntensity = (intensity: number): void => {
   setMusicRate(1 + clamped * 0.15)
 }
 
+/**
+ * Master trim applied on top of the player's 0..1 music slider.
+ *
+ * Rev 6 ("raise volume on Green Light triggered music — it's quiet") lifts this
+ * from 0.125. The single scale is the whole point: the settings watcher used to
+ * apply 0.025 while the fade-in aimed at 0.125, so merely touching the slider
+ * dropped the track to a fifth of its playing volume and it never came back.
+ */
+const MUSIC_SCALE = 0.3
+/** Fade lengths. The track is gated on the Cat's nap (§C: music plays under the
+ *  Green Light, silence IS the Red Light cue), and a nap can be as short as 1.2s
+ *  — so the envelope has to resolve in a fraction of that or the music spends the
+ *  whole window ramping and is never actually heard. That, not the gain, was the
+ *  real reason it read as quiet: the old 0.005-per-50ms ramp needed 750ms just to
+ *  reach the old target, and every Red Light cut it off part-way there. */
+const FADE_IN_MS = 300
+const FADE_OUT_MS = 180
+const FADE_STEP_MS = 25
+
+const musicTarget = (slider: number | undefined): number =>
+  Math.max(0, Math.min(1, (slider ?? 0.6) * MUSIC_SCALE))
+
 export const useMusic = () => {
   const { userMusicVolume, userMusicTrack } = useUser()
 
   watch(userMusicVolume, () => {
     if (!bgMusic.value) return
-    bgMusic.value.volume = Math.max(0, Math.min(1, (userMusicVolume.value ?? 0.6) * 0.025))
+    bgMusic.value.volume = musicTarget(userMusicVolume.value)
   })
 
   // Live-swap the background track when the player picks a different one in
@@ -95,6 +120,7 @@ export const useMusic = () => {
     const cached = resourceCache.audio.get(src)
     bgMusic.value.pause()
     bgMusic.value.volume = 0
+    loadedTrack = currentTrackFile()
     if (cached) {
       bgMusic.value.src = cached.src
       isLoaded.value = true
@@ -165,6 +191,7 @@ export const useMusic = () => {
       bgMusic.value?.pause()
       bgMusic.value?.removeAttribute('src')
       bgMusic.value = null
+      loadedTrack = ''
       shouldPlay.value = false
       isPlaying.value = false
       isLoaded.value = false
@@ -179,6 +206,14 @@ export const useMusic = () => {
     // mid-fight on extra calls.
     if (shouldPlay.value && isPlaying.value) return
     shouldPlay.value = true
+    // The element is already loaded with the track the player wants — a Red Light
+    // just paused it. RESUME it. Re-pointing `.src` (what loadAndPlayTrack does)
+    // rewinds the loop to zero, so before Rev 6 every single nap replayed the
+    // track's first two seconds and nothing else was ever heard of it.
+    if (isLoaded.value && loadedTrack === currentTrackFile()) {
+      playWithFade()
+      return
+    }
     loadAndPlayTrack()
   }
 
@@ -228,20 +263,17 @@ export const useMusic = () => {
 
   const fadeIn = () => {
     if (!bgMusic.value) return
-    let vol = 0
-    const target = Math.max(0, Math.min(1, (userMusicVolume.value ?? 0.6) * 0.125))
+    const target = musicTarget(userMusicVolume.value)
+    const step = target / Math.max(1, FADE_IN_MS / FADE_STEP_MS)
     const interval = setInterval(() => {
       if (!bgMusic.value || !shouldPlay.value) {
         clearInterval(interval)
         return
       }
-      if (vol < target) {
-        vol += 0.005
-        bgMusic.value.volume = Math.min(vol, target)
-      } else {
-        clearInterval(interval)
-      }
-    }, 50)
+      const v = Math.min(target, bgMusic.value.volume + step)
+      bgMusic.value.volume = v
+      if (v >= target) clearInterval(interval)
+    }, FADE_STEP_MS)
   }
 
   const fadeOut = (onDone?: () => void) => {
@@ -249,21 +281,24 @@ export const useMusic = () => {
       onDone?.()
       return
     }
+    // Ramp down from wherever the track actually is, so a Red Light that lands
+    // mid-fade-in still silences it in FADE_OUT_MS rather than in a fraction of it.
+    const step = Math.max(0.002, bgMusic.value.volume / Math.max(1, FADE_OUT_MS / FADE_STEP_MS))
     const interval = setInterval(() => {
       if (!bgMusic.value) {
         clearInterval(interval)
         onDone?.()
         return
       }
-      const v = bgMusic.value.volume
-      if (v > 0.005) {
-        bgMusic.value.volume = Math.max(0, v - 0.005)
+      const v = bgMusic.value.volume - step
+      if (v > 0) {
+        bgMusic.value.volume = v
       } else {
         bgMusic.value.volume = 0
         clearInterval(interval)
         onDone?.()
       }
-    }, 50)
+    }, FADE_STEP_MS)
   }
 
 

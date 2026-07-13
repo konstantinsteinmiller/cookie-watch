@@ -70,8 +70,12 @@ export default {
   'rewards': 'HADIAH',
   'tip': 'Tips',
   'crazyGamesOnly': 'Game ini hanya tersedia di',
-  'startTouch': 'Ketuk untuk Mulai',
-  'startDesktop': 'Klik untuk Mulai',
+  'startAnnounce': 'Mulai!',
+  'paused': {
+    'title': 'Dijeda',
+    'resume': 'Lanjutkan',
+    'pause': 'Jeda'
+  },
   'startSubhint': 'Tahan satu sisi untuk menyelinap, lepas untuk pura-pura mati. Tahan ke arah kue untuk memanen kepingan, bawa pulang — dan DIAM saat kucing bangun!',
   'powerups': {
     'invuln': 'Kebal',
