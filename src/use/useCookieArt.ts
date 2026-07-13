@@ -479,7 +479,11 @@ const drawNugget = (ctx: CanvasRenderingContext2D, x: number, y: number, r: numb
     const a = (i / facets) * Math.PI * 2
     const rad = r * (0.78 + ((i * 3) % 4) * 0.09)
     const px = x + Math.cos(a) * rad, py = y + Math.sin(a) * rad
-    if (i === 0) ctx.moveTo(px, py) else ctx.lineTo(px, py)
+    if (i === 0) {
+      ctx.moveTo(px, py)
+    } else {
+      ctx.lineTo(px, py)
+    }
   }
   ctx.closePath()
   ctx.fill()
